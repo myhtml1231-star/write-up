@@ -16,7 +16,16 @@ if username:
 
 ## 풀이
 
-**1.** `guest / guest`로 로그인하고 개발자 도구를 켠다.
+**1.** 코드에 guest 계정이 있다.
+
+```python
+users = {
+    'guest': 'guest',
+    'admin': FLAG
+}
+```
+
+아이디와 비밀번호가 둘 다 `guest`다. `guest / guest`로 로그인하고 개발자 도구를 켠다.
 
 <img src="https://github.com/user-attachments/assets/2b6df182-ebf8-4abe-8e9d-58027fe37d1d" alt="guest 로그인 화면" width="680" />
 
