@@ -12,9 +12,10 @@ def get_info():
     # ...
     userid = request.form.get('userid', '')
     info = requests.get(f'{API_HOST}/api/user/{userid}').text
+    return render_template('get_info.html', info=info)
 ```
 
-`/get_info`는 POST로 받은 `userid`를 경로에 넣어 서버 내부로 요청한다.
+`/get_info`에 POST 요청을 보내면 `userid`를 받아 내부 API에 요청한다. 그 응답을 `info`에 담아 HTML에 보여준다.
 
 ```python
 if request.remote_addr == '127.0.0.1':
