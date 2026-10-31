@@ -74,6 +74,8 @@ if cmd != '' or key == KEY:
 |:--|:--|
 | <img src="assets/02-before-key.png" width="450" alt="name이 key인 입력 요소"> | <img src="assets/03-after-cmd-input.png" width="450" alt="name을 cmd_input으로 변경한 입력 요소"> |
 
+![변경 전·후 비교 화면](assets/09-before-after-comparison.png)
+
 ```html
 <!-- 변경 전 -->
 <input type="text" class="form-control" placeholder="ls" name="key" required>
