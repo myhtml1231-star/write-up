@@ -115,15 +115,26 @@ except subprocess.TimeoutExpired:
 
 ### 6. KEY를 입력하여 FLAG 확인
 
-`/`의 원래 KEY 입력창으로 돌아가거나 입력 요소의 `name`을 다시 `key`로 바꾼다. 앞 단계에서 확인한 KEY를 입력하고 Submit한다.
-
-이때 `cmd_input` 값이 전달되지 않으면 `cmd`는 빈 문자열이 되고, 제출한 KEY가 일치하면 다음 분기가 실행된다.
+명령어를 실행하려고 변경했던 입력창의 `name="cmd_input"`을 다시 **`name="key"`**로 바꾼다. 서버가 두 값을 서로 다른 용도로 읽기 때문이다.
 
 ```python
+key = request.form.get('key', '')
+cmd = request.form.get('cmd_input', '')
+
 if cmd == '' and key == KEY:
     return render_template('flag.html', txt=FLAG)
 ```
 
-즉 **`cmd == ''`이면서 `key == KEY`인 조건이 성립하여 FLAG가 출력된다.**
+`cmd_input`은 명령어 입력으로 처리되지만, `key`는 인증용 KEY로 비교된다. 따라서 `name="key"`로 바꾸고 명령어 입력값은 보내지 않아 `cmd == ''` 조건도 만족시킨다.
 
-**취약점 핵심:** 시간 초과 예외 처리에서 인증용 KEY가 노출되고, 노출된 KEY를 정상 인증 입력값으로 제출하면 FLAG를 얻을 수 있다.
+![name을 key로 다시 변경한 화면](assets/06-restore-key.png)
+
+앞에서 `sleep 6`으로 얻은 KEY를 입력한 뒤 **Submit**을 누른다.
+
+![유출된 KEY를 입력한 화면](assets/07-enter-key.png)
+
+서버에서 `key == KEY`가 참이면 `render_template('flag.html', txt=FLAG)`가 실행되어 FLAG가 출력된다.
+
+![FLAG 획득 결과](assets/08-flag-result.png)
+
+**핵심:** 시간 초과 예외에서 노출된 KEY를 복호화할 필요 없이, 그대로 제출하면 FLAG를 확인할 수 있다.
