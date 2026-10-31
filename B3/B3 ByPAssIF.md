@@ -74,7 +74,6 @@ if cmd != '' or key == KEY:
 |:--|:--|
 | <img src="assets/02-before-key.png" width="450" alt="name이 key인 입력 요소"> | <img src="assets/03-after-cmd-input.png" width="450" alt="name을 cmd_input으로 변경한 입력 요소"> |
 
-![변경 전·후 비교 화면](assets/09-before-after-comparison.png)
 
 ```html
 <!-- 변경 전 -->
@@ -129,7 +128,9 @@ if cmd == '' and key == KEY:
 
 `cmd_input`은 명령어 입력으로 처리되지만, `key`는 인증용 KEY로 비교된다. 따라서 `name="key"`로 바꾸고 명령어 입력값은 보내지 않아 `cmd == ''` 조건도 만족시킨다.
 
-![name을 key로 다시 변경한 화면](assets/06-restore-key.png)
+| 변경 전 — `name="cmd_input"` | 변경 후 — `name="key"` |
+|:--|:--|
+| <img src="assets/03-after-cmd-input.png" width="450" alt="name을 cmd_input으로 변경한 입력 요소"> | <img src="assets/02-before-key.png" width="450" alt="name이 key인 입력 요소"> |
 
 앞에서 `sleep 6`으로 얻은 KEY를 입력한 뒤 **Submit**을 누른다.
 
