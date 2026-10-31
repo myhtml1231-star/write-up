@@ -37,7 +37,7 @@ if locker_num != "" and rand_str[0:len(locker_num)] == locker_num:
 import string
 import requests
 
-URL = "http://host3.dreamhack.games:12112/"
+URL = "http://host3.dreamhack.games:12112/"   # 본인 vm 주소를 넣는다
 locker = ""
 
 for _ in range(4):
