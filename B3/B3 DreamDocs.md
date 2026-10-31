@@ -4,7 +4,7 @@
 
 문서 공유 서비스에 접속하고, 개발자 도구(Console)에서 문서 목록을 확인한다.
 
-<img src="assets/dreamdocs-home.webp" width="670" alt="DreamDocs 첫 화면" />
+<img src="assets/dreamdocs-home.svg" width="670" alt="DreamDocs 첫 화면" />
 
 ### 2. 코드 분석
 
@@ -47,7 +47,7 @@ const docs = await (await fetch('/api/docs', {
 console.log(docs);
 ```
 
-<img src="assets/dreamdocs-list.webp" width="820" alt="관리자 헤더로 문서 목록을 요청하고 기밀 문서 ID를 확인한 콘솔 결과" />
+<img src="assets/dreamdocs-list.svg" width="820" alt="관리자 헤더로 문서 목록을 요청하고 기밀 문서 ID를 확인한 콘솔 결과" />
 
 `/api/docs`의 관리자 조건을 통과하여 `confidential` 문서가 목록에 포함된다. **조회된 문서 ID는 `856`**이었다. (서버가 재시작되면 달라질 수 있음)
 
@@ -62,7 +62,7 @@ fetch('/doc/856', {
 .then(html => console.log(html));
 ```
 
-<img src="assets/dreamdocs-result.webp" width="820" alt="Referer와 관리자 헤더로 기밀 문서를 조회하고 HTML에서 FLAG를 확인한 콘솔 결과" />
+<img src="assets/dreamdocs-result.svg" width="820" alt="Referer와 관리자 헤더로 기밀 문서를 조회하고 HTML에서 FLAG를 확인한 콘솔 결과" />
 
 `X-User: admin`으로 권한 검사를 통과하고, `referrer`에 `/share`가 포함되어 접근 제한도 통과한다. 응답 HTML의 문서 내용에서 FLAG를 확인하였다.
 
