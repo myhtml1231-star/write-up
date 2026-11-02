@@ -1,4 +1,4 @@
-# B2 · Introduction (XSS)
+# B1 · Are you admin?
 
 > **핵심:** 사용자 입력을 `safe`로 출력하는 페이지를 **관리자 인증 헤더가 설정된 Selenium 봇**이 방문한다. 이때 실행된 XSS가 `/whoami`의 응답에서 FLAG를 읽어 Request Bin으로 전달한다.
 
