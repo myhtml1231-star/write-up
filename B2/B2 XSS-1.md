@@ -43,7 +43,11 @@ def vuln():
     return param
 ```
 
-`return param`이 입력된 `<script>`를 이스케이프하지 않고 응답하므로, **봇의 브라우저가 태그를 HTML로 해석하고 안의 JavaScript를 실행한다.** 내 브라우저에서 실행되는 게 아니다.
+`return param`은 **JavaScript를 실행하는 명령이 아니다.** Flask 함수가 `param` 문자열을 반환하면 Flask가 그 값을 **HTTP 응답 본문**으로 브라우저에 전송한다. 문자열 응답은 기본적으로 `text/html`로 처리된다.
+
+예를 들어 `param`에 `<script>alert(1)</script>`가 들어오면, `return param`으로 그 태그가 **그대로 응답**된다. 이후 Selenium의 `driver.get(url)`로 페이지를 연 **Chrome이 HTML을 해석하면서 `<script>` 안의 JavaScript를 실행**한다.
+
+**정리:** `param` 입력 → `/vuln`이 문자열 반환 → Flask가 HTML 응답 전송 → 봇의 Chrome이 스크립트 실행. Python의 `return` 자체가 스크립트를 실행하는 것은 아니다.
 
 **④ 실행된 스크립트가 쿠키를 `/memo`로 전달한다.**
 
