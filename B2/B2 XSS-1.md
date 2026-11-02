@@ -6,22 +6,57 @@
 
 <img src="assets/01-home.png" alt="XSS-1 시작 화면" width="720">
 
-### 2. 코드 분석
+### 2. 코드 분석 — XSS가 실행되는 과정
 
-`/vuln`은 입력값 `param`을 그대로 반환하므로 스크립트가 실행될 수 있다.
+**① `/flag`에서 입력한 코드를 Selenium 봇에 전달한다.**
+
+```python
+param = request.form.get("param")
+if not check_xss(param, {"name": "flag", "value": FLAG.strip()}):
+    return '<script>alert("wrong??");history.go(-1);</script>'
+```
+
+입력한 스크립트가 `param`으로 전달되고, 봇에는 `flag`라는 이름의 **FLAG 쿠키**가 함께 설정된다.
+
+**② 봇이 FLAG 쿠키를 가진 상태로 `/vuln`에 접속한다.**
+
+```python
+# check_xss() 내부
+url = f"http://127.0.0.1:8000/vuln?param={urllib.parse.quote(param)}"
+return read_url(url, cookie)
+
+# read_url() 내부
+cookie.update({"domain": "127.0.0.1"})
+driver.get("http://127.0.0.1:8000/")
+driver.add_cookie(cookie)
+driver.get(url)
+```
+
+`urllib.parse.quote()`는 입력값을 URL에 넣을 수 있게 인코딩한다. Selenium은 로컬 사이트를 연 뒤 쿠키를 등록하고, 스크립트가 담긴 URL을 방문한다.
+
+**③ `/vuln`의 응답을 브라우저가 HTML로 처리하면서 스크립트가 실행된다.**
 
 ```python
 @app.route("/vuln")
 def vuln():
     param = request.args.get("param", "")
     return param
-
-# (생략)
-if not check_xss(param, {"name": "flag", "value": FLAG.strip()}):
-    # (생략)
 ```
 
-또한 `/flag`에 값을 제출하면 Selenium 봇이 `flag` 쿠키를 가진 상태로 `/vuln`에 접속한다. `/memo`는 전달받은 `memo` 값을 저장하고 화면에 표시한다.
+`return param`이 입력된 `<script>`를 이스케이프하지 않고 응답하므로, **봇의 브라우저가 태그를 HTML로 해석하고 안의 JavaScript를 실행한다.** 내 브라우저에서 실행되는 게 아니다.
+
+**④ 실행된 스크립트가 쿠키를 `/memo`로 전달한다.**
+
+```python
+@app.route("/memo")
+def memo():
+    global memo_text
+    text = request.args.get("memo", "")
+    memo_text += text + "\n"
+    return render_template("memo.html", memo=memo_text)
+```
+
+봇에서 `document.cookie`로 읽은 값이 `memo` 파라미터로 전달되면 서버가 `memo_text`에 누적하고 화면에 표시한다.
 
 ### 3. XSS 코드 입력
 
