@@ -1,0 +1,3 @@
+이 ZIP을 압축 해제한 뒤 B2/B2 Simple Note Manager.md와 B2/assets/simple-note-*.png를 GitHub 저장소의 같은 경로에 업로드하면 됩니다.
+이미지 경로를 변경하지 마세요. 사진과 문서가 같은 저장소에 있어야 GitHub에서 표시됩니다.
+기존 B2/B2 Simple Note Manager.md 파일은 이 버전으로 교체하세요.
