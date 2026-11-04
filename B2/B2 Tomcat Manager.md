@@ -4,6 +4,8 @@
 
 문제 페이지에 접속하면 `Under Construction` 화면과 이미지가 표시된다. 메인 페이지의 이미지 요청은 다음과 같다.
 
+<img width="1917" height="740" alt="image" src="https://github.com/user-attachments/assets/0035cff2-77fd-43b7-a00a-b24949bf6c69" />
+
 ```html
 <img src="./image.jsp?file=working.png"/>
 ```
