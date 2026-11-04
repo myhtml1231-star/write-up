@@ -2,6 +2,8 @@
 
 ### 1. VM에 접속한다
 
+<img width="1628" height="561" alt="image" src="https://github.com/user-attachments/assets/7d46e8f8-9bc4-46d3-8b37-45bf6a1cc4f5" />
+
 문제 페이지에서 IP 주소를 입력하면 `ping` 결과를 확인할 수 있다.
 
 ### 2. 코드 분석 — 명령어 삽입이 가능한 이유
@@ -29,6 +31,7 @@ FILTERED_CHARS = [' ', ';', '|', '&', '>', '<', '(', ')', '[', ']', '{', '}', '\
 따라서 **백틱 명령어 치환**과 공백 대신 `$IFS`를 사용할 수 있다. `shell=True` 때문에 쉘이 이를 명령어 문법으로 해석한다.
 
 ### 3. IP 입력란에 페이로드 입력
+<img width="1065" height="482" alt="image" src="https://github.com/user-attachments/assets/da998490-5552-4a9a-9e13-696f9693d692" />
 
 다음 값을 IP 입력란에 입력하여 `/ping`으로 전송한다.
 
@@ -71,6 +74,9 @@ return jsonify({
 ```
 
 `capture_output=True`가 오류 메시지를 `result.stderr`에 담고, `jsonify()`가 이를 HTTP 응답에 포함한다.
+
+<img width="1073" height="853" alt="image" src="https://github.com/user-attachments/assets/6a03592f-308e-4f11-b929-c0cd68c5c70e" />
+
 
 ```text
 stderr: ping: 127.0.0.1DH{...}: Name or service not known
