@@ -2,38 +2,22 @@
 
 ### 1. VM에 접속한다
 
-문제 페이지에 접속하면 `Under Construction` 화면과 이미지가 표시된다. 메인 페이지의 이미지 요청은 다음과 같다.
+문제 페이지에서 이미지 파일을 불러오는 `image.jsp?file=...` 요청을 확인한다. `file` 파라미터로 파일 경로를 전달하는 구조이므로 다른 경로도 지정할 수 있는지 살펴본다.
 
-<img width="1917" height="740" alt="image" src="https://github.com/user-attachments/assets/0035cff2-77fd-43b7-a00a-b24949bf6c69" />
+### 2. 요청 분석 — Path Traversal로 관리자 설정 파일 접근
 
-```html
-<img src="./image.jsp?file=working.png"/>
-```
+**① `file` 파라미터에 상위 디렉터리 이동 경로를 입력한다.**
 
-이미지 파일 이름을 `image.jsp`의 `file` 파라미터로 넘기고 있으므로, 이 값이 서버에서 어떻게 처리되는지 확인한다.
-
-### 2. 코드 분석 — Path Traversal로 관리자 설정 파일 접근
-
-**① `image.jsp`는 입력받은 파일 경로를 검증 없이 사용한다.**
-
-```jsp
-String filepath = getServletContext().getRealPath("resources") + "/";
-String _file = request.getParameter("file");
-
-java.io.FileInputStream fileInputStream =
-    new java.io.FileInputStream(filepath + _file);
-```
-
-`file` 값에 `../`를 넣으면 `resources` 디렉터리 밖으로 이동할 수 있다. 이를 이용해 Tomcat 설정 파일을 읽는다.
-
-Burp Suite Repeater에서 다음처럼 요청했다.
+**`image.jsp`의 실제 서버 소스코드는 확보하지 못했으므로 내부 구현 코드를 단정할 수 없다.** 아래는 Burp Repeater에서 사용한 HTTP 요청이다.
 
 ```http
 GET /image.jsp?file=/../../../../../../usr/local/tomcat/conf/tomcat-users.xml HTTP/1.1
 Host: host3.dreamhack.games:12275
 ```
 
-`/usr/local/tomcat/conf/tomcat-users.xml`은 Tomcat 사용자와 권한 정보를 저장하는 설정 파일이다. 문제에서 제공한 `tomcat-users.xml`의 비밀번호는 가려져 있었지만, 실제 서버 파일을 읽으면 인증 정보를 확인할 수 있었다.
+`../`는 상위 디렉터리로 이동하는 경로 표현이다. `file` 값에 이를 반복해 넣고 Tomcat 설정 파일인 `/usr/local/tomcat/conf/tomcat-users.xml`을 요청했다.
+
+해당 설정 파일의 내용이 응답에 노출되었다면 `file`에 지정한 경로가 의도된 디렉터리 밖의 파일 접근에 사용되는 **Path Traversal**이 성립한다. 이는 요청·응답 동작으로 판단한 것으로, 구현이 `FileInputStream`을 사용했는지는 확인되지 않았다.
 
 **② `tomcat-users.xml`에서 관리 권한을 확인한다.**
 
@@ -126,6 +110,6 @@ Host: host3.dreamhack.games:14594
 /flag 실행 → stdout에 FLAG 출력 → JSP가 읽어서 브라우저에 표시
 ```
 
-> **취약점 원인:** `image.jsp`가 사용자 입력 경로를 검증하지 않아 `tomcat-users.xml`이 노출되었고, 유출된 관리자 계정으로 Tomcat Manager에 로그인한 뒤 WAR 배포 기능을 이용해 서버에서 코드를 실행할 수 있었다.
+> **취약점 원인:** `image.jsp?file=` 요청의 Path Traversal로 `tomcat-users.xml`에 접근할 수 있었고, 유출된 관리자 계정으로 Tomcat Manager에 로그인한 뒤 WAR 배포 기능을 이용해 서버에서 코드를 실행할 수 있었다.
 
 **참고 자료:** [Tomcat Manager 공식 문서](https://tomcat.apache.org/tomcat-8.5-doc/html-manager-howto.html) · [사용한 WAR 파일 GitHub](https://github.com/tghosth/webshelljar)
