@@ -133,6 +133,23 @@ if (cmd != null) {
 
 ### 5. 웹 셸에서 FLAG 확인
 
-웹 셸에 `/flag`를 입력해 FLAG가 출력되는 것을 확인한다.
+Tomcat Manager에서 `webshell.war`를 배포하면 `/webshell/index.jsp`에 웹 셸이 생성된다. 이 페이지의 입력창에 `/flag`를 입력하고 **Run**을 누른다.
+
+```http
+GET /webshell/index.jsp?cmd=%2Fflag HTTP/1.1
+Host: host3.dreamhack.games:14594
+```
+
+`%2F`는 `/`의 URL 인코딩이므로 실제 `cmd` 값은 `/flag`이다.
+
+**실행 흐름**
+
+1. 브라우저가 `cmd=/flag` 요청을 `index.jsp`에 보낸다.
+2. `request.getParameter("cmd")`가 `/flag`를 읽는다.
+3. `Runtime.getRuntime().exec(cmd, null, null)`가 **Tomcat 서버에서 `/flag`를 실행**한다.
+4. `/flag`가 출력한 값을 `p.getInputStream()`으로 읽고 `readLine()` 반복문을 통해 `output`에 저장한다.
+5. JSP가 `output`을 HTML로 표시하므로 브라우저에 `DH{...}`가 출력된다.
+
+즉, **`/flag`를 텍스트로 읽은 것이 아니라 실행한 뒤 표준 출력(stdout)을 화면에 보여준 것**이다.
 
 <p align="center"><img src="https://github.com/user-attachments/assets/5b30fdd8-fec0-4e52-869b-1fb28f0dbc28" width="550" alt="웹 셸에서 FLAG 출력 확인" /></p>
