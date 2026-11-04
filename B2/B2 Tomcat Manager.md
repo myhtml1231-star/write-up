@@ -131,38 +131,8 @@ if (cmd != null) {
 | :---: | :---: |
 | <img src="https://github.com/user-attachments/assets/d3540b37-5f85-4aad-9e02-dea064c6ea93" width="400" alt="실행 전 화면" /> | <img src="https://github.com/user-attachments/assets/6e564a4a-5694-4ba3-9c81-3b08dcdf578a" width="400" alt="실행 후 화면" /> |
 
-**④ 최종 확인 화면**
-
-<p align="center"><img src="https://github.com/user-attachments/assets/5b30fdd8-fec0-4e52-869b-1fb28f0dbc28" width="550" alt="최종 확인 화면" /></p>
-
-
-
-
-Tomcat Manager의 **WAR file to deploy**에 `webshell.war`를 업로드하고 `Deploy`를 누른다. WAR 파일 이름이 `webshell.war`이므로 기본 배포 경로는 `/webshell`이 된다.
-
 ### 5. 웹 셸에서 FLAG 확인
 
-배포된 웹 셸로 접속한다.
+웹 셸에 `/flag`를 입력해 FLAG가 출력되는 것을 확인한다.
 
-```text
-http://서버주소:포트/webshell/index.jsp
-```
-
-명령어 입력창에 `/flag`를 입력하거나 다음과 같이 요청한다.
-
-```http
-GET /webshell/index.jsp?cmd=%2Fflag HTTP/1.1
-Host: host3.dreamhack.games:14594
-```
-
-`%2F`는 `/`를 URL 인코딩한 것이므로 `cmd` 값은 `/flag`이다.
-
-웹 셸이 `/flag`를 **명령어로 실행**하고, 프로그램이 출력한 `DH{...}`를 `getInputStream()`으로 읽어 화면에 보여준다.
-
-```text
-/flag 실행 → stdout에 FLAG 출력 → JSP가 읽어서 브라우저에 표시
-```
-
-> **취약점 원인:** `image.jsp?file=` 요청의 Path Traversal로 `tomcat-users.xml`에 접근할 수 있었고, 유출된 관리자 계정으로 Tomcat Manager에 로그인한 뒤 WAR 배포 기능을 이용해 서버에서 코드를 실행할 수 있었다.
-
-
+<p align="center"><img src="https://github.com/user-attachments/assets/5b30fdd8-fec0-4e52-869b-1fb28f0dbc28" width="550" alt="웹 셸에서 FLAG 출력 확인" /></p>
