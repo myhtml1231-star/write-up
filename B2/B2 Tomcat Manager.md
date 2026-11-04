@@ -113,19 +113,27 @@ if (cmd != null) {
 
 따라서 WAR를 배포하면 서버에서 명령어를 실행하고 결과를 볼 수 있다. **Tomcat Manager의 WAR 배포 권한을 통한 RCE**인 것이다.
 
-<img width="895" height="298" alt="image" src="https://github.com/user-attachments/assets/00209578-42a1-47ed-bdb8-9bf8ec7cc426" />
+**① WAR 배포 과정**
 
-<img width="897" height="274" alt="image" src="https://github.com/user-attachments/assets/be047e8b-4d6d-469b-bd7c-0dd92aa5ec41" />
+| 배포 과정 1 | 배포 과정 2 |
+| :---: | :---: |
+| <img src="https://github.com/user-attachments/assets/00209578-42a1-47ed-bdb8-9bf8ec7cc426" width="420" alt="WAR 배포 과정 첫 번째 화면" /> | <img src="https://github.com/user-attachments/assets/be047e8b-4d6d-469b-bd7c-0dd92aa5ec41" width="420" alt="WAR 배포 과정 두 번째 화면" /> |
 
-<img width="897" height="429" alt="image" src="https://github.com/user-attachments/assets/159f8170-6783-4ff5-9464-868d34247367" />
+**② 과정별 확인 화면**
 
-<img width="815" height="131" alt="image" src="https://github.com/user-attachments/assets/a005f46c-64b9-4f8f-b8e7-f527b984665d" />
+<p align="center"><img src="https://github.com/user-attachments/assets/159f8170-6783-4ff5-9464-868d34247367" width="780" alt="WAR 배포 과정 세 번째 화면" /></p>
 
-<img width="480" height="324" alt="image" src="https://github.com/user-attachments/assets/d3540b37-5f85-4aad-9e02-dea064c6ea93" />
+<p align="center"><img src="https://github.com/user-attachments/assets/a005f46c-64b9-4f8f-b8e7-f527b984665d" width="740" alt="WAR 배포 과정 네 번째 화면" /></p>
 
-<img width="475" height="322" alt="image" src="https://github.com/user-attachments/assets/6e564a4a-5694-4ba3-9c81-3b08dcdf578a" />
+**③ 실행 전·후 비교**
 
-<img width="561" height="84" alt="image" src="https://github.com/user-attachments/assets/5b30fdd8-fec0-4e52-869b-1fb28f0dbc28" />
+| 실행 전 | 실행 후 |
+| :---: | :---: |
+| <img src="https://github.com/user-attachments/assets/d3540b37-5f85-4aad-9e02-dea064c6ea93" width="400" alt="실행 전 화면" /> | <img src="https://github.com/user-attachments/assets/6e564a4a-5694-4ba3-9c81-3b08dcdf578a" width="400" alt="실행 후 화면" /> |
+
+**④ 최종 확인 화면**
+
+<p align="center"><img src="https://github.com/user-attachments/assets/5b30fdd8-fec0-4e52-869b-1fb28f0dbc28" width="550" alt="최종 확인 화면" /></p>
 
 
 
