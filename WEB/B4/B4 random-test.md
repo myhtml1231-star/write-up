@@ -63,6 +63,6 @@ for password in range(100, 201):
 
 ### 4. FLAG를 확인한다
 
-![random-test FLAG 확인 화면](../assets/random-test.png)
+![random-test FLAG 확인 화면](../../assets/random-test.png)
 
 FLAG: `DH{2e583205a2555b8890d141b51cee41379cead9a65a957e72d4a99568c0a2f955}`
