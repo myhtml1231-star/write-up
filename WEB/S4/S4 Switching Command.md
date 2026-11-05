@@ -2,7 +2,6 @@
 
 ### 1. VM에 접속한다
 
-문제 페이지에는 `Username` 입력창이 있다. 서버는 전달된 값을 `index.php`에서 JSON으로 해석한다.
 
 <p align="center"><img src="https://github.com/user-attachments/assets/1347d451-42ba-447e-a412-cdb8996f5b6b" width="850" alt="Switching Command 초기 화면" /></p>
 
