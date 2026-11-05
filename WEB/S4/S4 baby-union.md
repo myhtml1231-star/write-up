@@ -37,6 +37,7 @@ if uid and upw:
 ' ORDER BY 5 #
 ```
 
+
 `ORDER BY n`은 **n개 행을 조회**하는 게 아니라 **n번째 컬럼으로 정렬**하는 구문이다. 확인 결과 기존 `SELECT * FROM users`는 **4개 컬럼**을 반환하므로, UNION에도 4개를 맞춘다.
 
 **ORDER BY 테스트 화면**
@@ -44,6 +45,10 @@ if uid and upw:
 <p align="center"><img src="https://github.com/user-attachments/assets/f4b12a9b-ba32-4351-8d79-3a7d0981783b" width="580" alt="ORDER BY 컬럼 개수 확인 첫 번째 화면" /></p>
 
 <p align="center"><img src="https://github.com/user-attachments/assets/1e425526-8fad-4ea9-964e-f354010900b7" width="800" alt="ORDER BY 컬럼 개수 확인 두 번째 화면" /></p>
+
+```text
+컬럼 5번 부터 Internal Server Error이 뜬다. 따라서 컬럼개수는 4개인것을 확인
+```
 
 ### 4. UNION으로 테이블 목록 조회
 
