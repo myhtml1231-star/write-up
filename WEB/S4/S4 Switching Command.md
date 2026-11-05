@@ -116,7 +116,8 @@ passthru('/flag');
 ?>
 ```
 
-`passthru()`는 운영체제 명령어를 실행하고 그 결과(stdout)를 별도 `echo` 없이 웹 응답에 출력하는 PHP 함수다. Dockerfile에서 `flag.c`를 컴파일해 `/flag` 실행 파일을 만들기 때문에, 이 파일은 텍스트로 읽는 것이 아니라 실행해야 한다.
+`passthru()`는 운영체제 명령어를 실행하고 그 결과(stdout)를 별도 `echo` 없이 웹 응답에 출력하는 PHP 함수다. 
+Dockerfile에서 `flag.c`를 컴파일해 `/flag` 실행 파일을 만들기 때문에, 이 파일은 텍스트로 읽는 것이 아니라 실행해야 한다.
 
 **② Gist 파일을 생성하고 `Raw` 링크를 복사한다.**
 
