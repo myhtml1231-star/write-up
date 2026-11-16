@@ -82,3 +82,33 @@ cat flag
 <p align="center">
   <img src="assets/sint/result.png" width="800" alt="원격 셸에서 cat flag를 실행한 결과" />
 </p>
+
+
+### 5. DreamHack FLAG 입력란에 제출
+
+터미널에 출력된 FLAG를 복사해 DreamHack 문제 페이지의 **FLAG 입력란**에 붙여 넣고 제출한다. 입력할 값은 아래와 같다.
+
+```text
+DH{d66e84c453b960cfe37780e8ed9d70ab}
+```
+
+제출 후 문제 페이지에 정답 처리 표시가 나타나는지 확인한다. 위 실행 사진은 셸에서 FLAG를 출력한 결과이며, 제출 버튼을 누른 화면은 포함하지 않았다.
+
+### 6. 취약점 예방법
+
+입력값을 뺄셈하기 전에 유효 범위인지 검사하고, 검증된 크기만 `read()`에 전달한다. 버퍼 용량을 넘지 않도록 제한하면 음수에서 큰 unsigned 값으로 바뀌는 문제를 막을 수 있다.
+
+```c
+if (size < 1 || size > (int)sizeof(buf)) {
+    puts("Invalid size");
+    return 1;
+}
+
+ssize_t received = read(STDIN_FILENO, buf, (size_t)size);
+```
+
+실제 문자열 입력이라면 마지막에 널 문자를 넣을 공간을 남겨 `sizeof(buf) - 1`까지만 읽어야 한다. 또한 SIGSEGV가 났을 때 셸을 실행하는 `signal(SIGSEGV, get_shell)`은 제거하고, 오류를 기록한 뒤 종료하도록 처리해야 한다.
+
+스택 카나리와 PIE 같은 컴파일 보호 기법도 추가 방어층이 될 수 있지만, 안전한 길이 검사를 대신하지는 않는다. NX는 스택에 넣은 코드를 실행하는 공격을 어렵게 하지만, 이 문제처럼 기존 함수 주소로 흐름을 바꾸는 공격을 단독으로 막지는 못한다.
+
+**취약점 원인:** 0을 거르는 검사가 없어 `size - 1`이 음수가 되고, 이 값이 `read()`의 큰 unsigned 길이로 변환되어 스택 버퍼를 넘는다. 뺄셈 전에 범위를 검증하고 `read()` 길이를 버퍼 크기 이하로 제한해야 한다.
