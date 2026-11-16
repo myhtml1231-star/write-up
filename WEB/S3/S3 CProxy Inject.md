@@ -4,7 +4,8 @@
 
 `/auth`에 접속하면 ID와 PW를 입력하는 로그인 화면이 나온다. 목표는 `admin_inject` 계정으로 로그인해 저장된 응답 기록에서 FLAG를 읽는 것이다.
 
-<p align="center"><img src="assets/01-auth.png" width="627" alt="CProxy 로그인 화면" /></p>
+<p align="center"><img width="627" height="281" alt="codex-clipboard-5086c749-afdd-4c20-95c4-1b32cf562d38" src="https://github.com/user-attachments/assets/489ed677-1b02-4589-95bf-531504b432a8" />
+</p>
 
 ### 2. 코드 분석 — 객체를 이용한 SQL Injection
 
@@ -56,13 +57,17 @@ id=admin_inject&pw%5Bpw%5D=1
 
 `%5B`와 `%5D`는 대괄호 `[`와 `]`의 URL 인코딩이다. 결과적으로 `pw`가 문자열이 아닌 `{pw: "1"}` 객체로 전달된다.
 
-<p align="center"><img src="assets/02-payload.png" width="604" alt="Burp Repeater에서 수정한 로그인 POST 요청" /></p>
+<p align="center"><img width="604" height="482" alt="codex-clipboard-dfce81d5-c396-4e21-b1b2-72990dfa9f67" src="https://github.com/user-attachments/assets/a8919ce7-408a-4d48-ac6b-f1cdf8682ac4" />
+    
+
+</p>
 
 ### 4. 관리자 로그인 성공 확인
 
 요청을 전송하면 **`302 Found`와 `Location: /`** 응답이 나온다. 소스코드상 `doLogin()`이 사용자 번호 `1`을 반환한 경우 이 응답이 발생하며, 서버는 `req.session.uid = 1`을 저장한다.
 
-<p align="center"><img src="assets/03-login-success.png" width="615" alt="로그인 우회 요청에 대한 302 및 루트 경로 리다이렉션 응답" /></p>
+<p align="center"><img width="1223" height="399" alt="codex-clipboard-4d38ff7a-99a5-463b-9d78-fa9b6e7c95f0" src="https://github.com/user-attachments/assets/17f5f9f7-168f-4fa6-8cf4-fc4073c36a6d" />
+</p>
 
 ### 5. 관리자 응답 기록 조회
 
@@ -74,7 +79,8 @@ Host: <VM주소:포트>
 Cookie: connect.sid=<기존_세션_쿠키>
 ```
 
-<p align="center"><img src="assets/04-history-request.png" width="790" alt="관리자 세션 쿠키를 유지한 history 1번 GET 요청" /></p>
+<p align="center">
+</p>
 
 서버는 `db.getResponse(uid, rid)`로 다음 SQL을 실행한다.
 
@@ -88,6 +94,11 @@ SELECT res FROM responses WHERE _id = 1 AND uid = 1;
 
 응답에서 `200 OK`와 JSON의 `data` 항목에 포함된 `DH{...}` 형식의 FLAG를 확인했다.
 
-<p align="center"><img src="assets/05-flag.png" width="596" alt="GET history 1 응답의 JSON data에서 FLAG 확인" /></p>
+<p align="center"><img width="862" height="237" alt="codex-clipboard-ece285d9-bd54-49df-b42b-5319bd41f5a3" src="https://github.com/user-attachments/assets/0889deac-ba99-4c2a-b722-8c137f770e18" />
+<img width="1468" height="381" alt="codex-clipboard-e33b8c4b-ae1f-43cb-991c-5f456cfbb796" src="https://github.com/user-attachments/assets/05cf5b25-b45d-4273-8523-da00cfefd24d" /></p>
+
+```text
+DH{1b2447f2cabacb0fc288166c7b031d5c5572128543d531e1481e8a0155a0b335}
+```
 
 **취약점 원인:** 비밀번호 입력의 자료형 검증이 없어 객체가 SQL 비교식으로 변환되었고, 이로 인해 관리자 비밀번호 검증을 우회할 수 있었다.
