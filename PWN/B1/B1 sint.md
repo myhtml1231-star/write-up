@@ -82,13 +82,3 @@ cat flag
 <p align="center">
   <img src="assets/sint/result.png" width="800" alt="원격 셸에서 cat flag를 실행한 결과" />
 </p>
-
-### 5. Kali에서 컴파일할 때
-
-원본의 `alarm_handler()`와 `get_shell()`은 인자를 받지 않는 형태라 최신 GCC에서 `signal()`에 전달할 때 형식 오류가 날 수 있다. Kali에서 직접 컴파일하려면 두 함수의 선언을 `void handler(int sig)` 형태로 바꾸고, 사용하지 않는 인자는 `(void)sig;`로 처리한다.
-
-```bash
-gcc sint.c -o sint -m32 -fno-stack-protector -no-pie
-```
-
-`process("./sint")`는 내 컴퓨터에서 실행할 때 쓰고, 원격 문제를 풀 때는 `remote(host, port)`를 쓴다. 다만 주소 계산에는 서버와 같은 빌드의 로컬 바이너리를 사용해야 한다.
