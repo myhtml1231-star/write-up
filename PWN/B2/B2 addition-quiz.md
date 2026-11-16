@@ -2,6 +2,10 @@
 
 ### 1. 문제 분석
 
+<p align="center">
+  <img src="assets/addition-quiz/challenge.png" width="300" alt="addition-quiz 문제 이름과 B2 난이도" />
+</p>
+
 프로그램은 난수 두 개를 더하는 문제를 50번 출제한다.
 
 ```c
@@ -25,6 +29,10 @@ puts(flag);
 
 ### 2. 풀이 스크립트
 
+<p align="center">
+  <img src="assets/addition-quiz/script.png" width="800" alt="문제 서버에 연결하고 50문제를 푸는 스크립트" />
+</p>
+
 ```python
 from pwn import *
 
@@ -45,6 +53,12 @@ r.interactive()
 
 서버는 한 문제를 보내고 `scanf()`로 답을 기다린다. 정답을 받아야 다음 문제를 보내므로, 같은 연결에서 **수신 → 숫자 추출 → 계산 → 답 전송**을 50번 반복해야 한다. 1초 제한 때문에 이 과정을 스크립트로 자동화했다.
 
+실행 중 문제를 수신하고 답을 전송한 기록이다.
+
+<p align="center">
+  <img src="assets/addition-quiz/exchange.png" width="800" alt="서버와 덧셈 문제 및 정답을 주고받는 로그" />
+</p>
+
 예를 들어 서버가 `2917+9658=?\n`을 보내면:
 
 1. `recvuntil(b'+', drop=True)`가 `+`까지 읽고 구분자를 제외한 `b'2917'`을 반환한다.
@@ -57,6 +71,10 @@ r.interactive()
 ### 4. 결과 확인
 
 반복문이 끝난 후 `interactive()`로 연결을 대화형 모드로 전환해 서버의 남은 출력을 확인한다. 실행 결과 `Nice!`와 FLAG가 출력되었다.
+
+<p align="center">
+  <img src="assets/addition-quiz/result.png" width="800" alt="Nice와 FLAG가 출력된 실행 결과" />
+</p>
 
 ```text
 Nice!
