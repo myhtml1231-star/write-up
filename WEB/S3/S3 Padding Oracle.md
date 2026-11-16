@@ -8,9 +8,9 @@
 - `GET /secure/decrypt` — `token`·`e_data`를 복호화해 권한을 확인
 - `GET /secure/secret?password=` — 비밀번호가 맞으면 FLAG 반환
 
-`admin` 글에는 관리자 비밀번호가 암호문으로 들어 있고, FLAG는 그 비밀번호를 알아야 받을 수 있다.
+`admin` 글에는 관리자 비밀번호가 암호문으로 들어 있고, FLAG는 그 비밀번호를 알아야 받을 수 있다. 접속하면 인덱스는 아래와 같이 응답한다.
 
-[초기 화면 — /gb/ 글 목록]
+<p align="center"><img src="access.webp" width="760" alt="접속 화면 — 인덱스 응답" /></p>
 
 ### 2. 코드 분석 — 취약점 원인
 
@@ -26,7 +26,7 @@ def decrypt(self, enc_text):
     return dec_text
 ```
 
-`decrypt`는 복호화 후 `unpad`로 PKCS#7 패딩을 검사·제거한다. 패딩 형식이 틀리면 `ValueError`가 난다.
+`decrypt`는 복호화 후 `unpad`으로 PKCS#7 패딩을 검사·제거한다. 패딩 형식이 틀리면 `ValueError`가 난다.
 
 **(2) 패딩 오라클** — `app.py /secure/decrypt`
 
@@ -47,8 +47,6 @@ return jsonify({"status": "success", "result": {"article": article}})   # enc_da
 ```
 
 `GET /gb/1`로 `admin` 글의 암호문(`enc_data`)을 누구나 받을 수 있다.
-
-[핵심 코드 — AESCrypto.decrypt / /secure/decrypt]
 
 ### 3. 공격 원리 — 패딩 오라클
 
@@ -155,17 +153,11 @@ if __name__ == "__main__":
 python3 solve_fast.py http://<VM_주소:포트>
 ```
 
-```
-  [블록2] b' password is: p4'
-  [블록3] b'5$W0Rd", "author'
-[+] 비밀번호: p45$W0Rd
-[FLAG] DH{0cfeeb1ded546cb87e43caf2df2c6ec078c559b5}
-```
+블록 2·3을 각각 복호화해 관리자 비밀번호 **`p45$W0Rd`**를 복원했다. (블록2 끝 `p4` + 블록3 앞 `5$W0Rd`)
 
-- 블록2 끝 2글자 `p4` + 블록3 앞 6글자 `5$W0Rd` = 관리자 비밀번호 **`p45$W0Rd`**
-- `/gb/1`에서 받은 암호문만으로, 키 없이 비밀번호를 복원했다.
+<p align="center"><img src="exploit.png" width="860" alt="익스플로잇 실행 결과 — 블록 2·3 복호화, 비밀번호 복원" /></p>
 
-[실행 결과 화면]
+`/gb/1`에서 받은 암호문만으로 키 없이 비밀번호를 복원했다.
 
 ### 6. FLAG 확인
 
@@ -182,6 +174,6 @@ GET /secure/secret?password=p45$W0Rd
 → DH{0cfeeb1ded546cb87e43caf2df2c6ec078c559b5}
 ```
 
-[FLAG 확인 화면]
+<p align="center"><img src="flag.png" width="760" alt="FLAG 획득 화면" /></p>
 
 **취약점 원인:** 고정 IV AES-CBC 복호화에서 패딩 오류(`ValueError`)만 다른 응답으로 노출되어 패딩 오라클이 성립하고, 공개된 `enc_data`를 그 오라클로 복호화해 관리자 비밀번호를 복원할 수 있었다. 대응은 복호화 에러 메시지 통일과 `AES-GCM`·Encrypt-then-MAC 같은 인증 암호화 도입이다.
