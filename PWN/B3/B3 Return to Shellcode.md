@@ -114,7 +114,13 @@ p.interactive()
 
 ### 6. 실행 결과
 
-먼저 `buf` 주소·거리·카나리가 제대로 수집되는지 확인합니다. `buf ↔ 카나리 = 0x58`이 그대로 나옵니다.
+먼저 아래 코드로 `buf` 주소·거리·카나리가 제대로 수집되는지 확인합니다.
+
+<p align="center">
+  <img src="assets/r2s/leak_code.png" width="620" alt="buf 주소·거리·카나리를 받아 출력하는 확인용 코드" />
+</p>
+
+실행하면 `buf ↔ 카나리 = 0x58`과 카나리 값이 그대로 나옵니다.
 
 <p align="center">
   <img src="assets/r2s/leak_result.png" width="700" alt="buf 주소, buf↔sfp 0x60, buf↔canary 0x58, 카나리 값을 출력한 화면" />
