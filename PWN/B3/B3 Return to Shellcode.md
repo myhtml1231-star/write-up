@@ -50,22 +50,22 @@ int main() {
 - **친절한 출력** — 프로그램이 `buf` 주소와 `buf ↔ rbp` 거리를 직접 알려줍니다. ASLR이 있어도 매번 정확한 주소를 얻습니다.
 - **`-zexecstack`** — 스택이 실행 가능하므로 `buf`에 올린 **셸코드를 그대로 실행**할 수 있습니다.
 
-### 3. 스택 구조 — 왜 buf ↔ 카나리가 0x58인가
+### 3. 스택 구조 
+<p align="center">
+  <img src="assets/r2s/leak_code.png" width="620" alt="buf 주소·거리·카나리를 받아 출력하는 확인용 코드" />
+</p>
+
+실행하면 `buf ↔ 카나리 = 0x58`과 카나리 값이 그대로 나옵니다.
+
+<p align="center">
+  <img src="assets/r2s/leak_result.png" width="700" alt="buf 주소, buf↔sfp 0x60, buf↔canary 0x58, 카나리 값을 출력한 화면" />
+</p>
 
 <p align="center">
   <img src="assets/r2s/stackframe.svg" width="820" alt="buf 0x50 + 패딩 0x8 = 0x58, 그 뒤 카나리/SFP/RET 스택 구조" />
 </p>
-
-| 위치 | 항목 | 크기 |
-|---|---|---|
-| `rbp-0x60` | `buf[0x50]` | 0x50 (80바이트) |
-| `rbp-0x10` | 정렬 패딩 | 0x8 |
-| `rbp-0x08` | 카나리 | 0x8 (맨 아래 1바이트 `\x00`) |
-| `rbp+0x00` | SFP(저장된 rbp) | 0x8 |
-| `rbp+0x08` | 반환 주소(RET) | 0x8 |
-
 - `buf`는 소스상 `0x50`이지만, 실제 **buf ↔ 카나리 거리는 `0x58`**이다 (`0x50 + 패딩 0x8`).
-- 그래서 소스의 `0x50`을 믿지 말고, 프로그램이 알려주는 `buf ↔ rbp` 거리에서 `- 8`로 카나리까지 거리(`buf2cnry`)를 구한다.
+
 
 ### 4. 공격 흐름
 
@@ -123,15 +123,7 @@ p.interactive()
 
 먼저 아래 코드로 `buf` 주소·거리·카나리가 제대로 수집되는지 확인합니다.
 
-<p align="center">
-  <img src="assets/r2s/leak_code.png" width="620" alt="buf 주소·거리·카나리를 받아 출력하는 확인용 코드" />
-</p>
 
-실행하면 `buf ↔ 카나리 = 0x58`과 카나리 값이 그대로 나옵니다.
-
-<p align="center">
-  <img src="assets/r2s/leak_result.png" width="700" alt="buf 주소, buf↔sfp 0x60, buf↔canary 0x58, 카나리 값을 출력한 화면" />
-</p>
 
 전체 익스플로잇을 실행하면 셸이 열리고 `cat flag`로 FLAG를 획득합니다.
 
