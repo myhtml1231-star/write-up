@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 360" font-family="'DejaVu Sans Mono','Menlo',monospace">
+  <rect x="0" y="0" width="1040" height="360" rx="14" fill="#22223a"/>
+
+  <!-- bar segments : low addr(left) -> high addr(right) -->
+  <!-- Buf 0x50 -->
+  <rect x="60"  y="180" width="360" height="74" fill="#3a3a52" stroke="#55557a" stroke-width="2"/>
+  <text x="240" y="223" fill="#ffffff" font-size="24" text-anchor="middle">Buf (0x50)</text>
+
+  <!-- padding 0x8 -->
+  <rect x="420" y="180" width="70" height="74" fill="#4a3f5c" stroke="#7a5f9a" stroke-width="2" stroke-dasharray="5 4"/>
+  <text x="455" y="217" fill="#d9c6ef" font-size="14" text-anchor="middle">pad</text>
+  <text x="455" y="234" fill="#d9c6ef" font-size="14" text-anchor="middle">0x8</text>
+
+  <!-- canary group : \x00 + canary (0x8) -->
+  <rect x="490" y="180" width="50"  height="74" fill="#c0356f" stroke="#ff6fa3" stroke-width="2"/>
+  <text x="515" y="223" fill="#ffffff" font-size="17" text-anchor="middle">\x00</text>
+  <rect x="540" y="180" width="160" height="74" fill="#8f2a52" stroke="#ff6fa3" stroke-width="2"/>
+  <text x="620" y="223" fill="#ffffff" font-size="22" text-anchor="middle">Canary</text>
+
+  <!-- SFP -->
+  <rect x="700" y="180" width="150" height="74" fill="#3a3a52" stroke="#55557a" stroke-width="2"/>
+  <text x="775" y="223" fill="#ffffff" font-size="22" text-anchor="middle">SFP</text>
+
+  <!-- RET -->
+  <rect x="850" y="180" width="130" height="74" fill="#3a3a52" stroke="#55557a" stroke-width="2"/>
+  <text x="915" y="223" fill="#ffffff" font-size="22" text-anchor="middle">RET</text>
+
+  <!-- brace: 0x58  (buf start -> canary start) -->
+  <path d="M60,170 C60,120 490,120 490,170" fill="none" stroke="#e23f7a" stroke-width="3"/>
+  <rect x="222" y="92" width="106" height="38" rx="10" fill="#e23f7a"/>
+  <text x="275" y="118" fill="#ffffff" font-size="22" text-anchor="middle">0x58</text>
+
+  <!-- brace: 0x8 (canary group) -->
+  <path d="M490,170 C490,128 700,128 700,170" fill="none" stroke="#e23f7a" stroke-width="3"/>
+  <rect x="542" y="100" width="96" height="36" rx="10" fill="#e23f7a"/>
+  <text x="590" y="125" fill="#ffffff" font-size="20" text-anchor="middle">0x8</text>
+
+  <!-- equation note -->
+  <text x="275" y="300" fill="#ffd0e2" font-size="15" text-anchor="middle">0x50 (배열) + 0x8 (정렬 패딩) = 0x58</text>
+
+  <!-- address markers -->
+  <text x="60"  y="276" fill="#9aa0c4" font-size="13" text-anchor="middle">rbp-0x60</text>
+  <text x="515" y="276" fill="#9aa0c4" font-size="13" text-anchor="middle">rbp-0x8</text>
+  <text x="700" y="276" fill="#9aa0c4" font-size="13" text-anchor="middle">rbp</text>
+  <text x="850" y="276" fill="#9aa0c4" font-size="13" text-anchor="middle">rbp+0x8</text>
+
+  <text x="520" y="340" fill="#ffffff" font-size="20" font-weight="bold" text-anchor="middle">Stackframe</text>
+</svg>
