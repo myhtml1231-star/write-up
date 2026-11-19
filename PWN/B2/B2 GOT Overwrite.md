@@ -110,6 +110,17 @@ p.interactive()
 ⑤ puts(command) 실행   → GOT[puts](=system) 점프 → system("/bin/sh") → 셸
 ```
 
+**⑤ `puts(command)`가 방아쇠인 이유** — ②③④로 GOT를 덮는 건 **값만 바꿔둔 준비 상태**이고, 그 슬롯을 실제로 꺼내 쓰는 마지막 `puts(command)` 호출이 **발사**다. 이 한 줄은 어셈블리로 보면:
+
+```asm
+lea  rdi, [command]      ; ① command("/bin/sh")를 인자(rdi)로 세팅
+call puts@plt            ; ② puts@plt 호출
+jmp  qword [GOT[puts]]   ; ③ puts@plt 내부 → GOT[puts]로 점프
+                         ;    원래값: puts / 지금: system (우리가 덮음)
+```
+
+이 호출에서 **rdi에 command가 실리고(①)** 점프 목적지가 **GOT[puts](=system)(③)**이라, 결국 `system("/bin/sh")`이 실행된다. GOT만 덮고 이 호출이 없으면 아무 일도 안 일어난다 — **덮기 = 준비, `puts(command)` 호출 = 발사.**
+
 <p align="center">
   <img src="assets/got_overwrite/result.png" width="760" alt="원격 셸에서 cat flag로 FLAG를 확인한 화면" />
 </p>
