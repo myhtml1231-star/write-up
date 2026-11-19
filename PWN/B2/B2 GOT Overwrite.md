@@ -9,14 +9,34 @@
 ### 2. 코드 — 임의 주소 쓰기 + libc leak
 
 ```c
-char command[0x40] = {0};
-void *where = NULL;
+// Name: got_overwrite.c
+// Compile: gcc -o got_overwrite got_overwrite.c -ldl -no-pie -fno-PIE -Wl,-z,norelro
+#define _GNU_SOURCE
+#include <dlfcn.h>
+#include <stdio.h>
+#include <unistd.h>
 
-printf("puts: %p\n", dlsym(RTLD_DEFAULT, "puts"));  // ① puts 실제 주소 공짜 제공 (leak)
-read(0, command, sizeof(command) - 1);  // ② 명령 문자열 입력
-read(0, &where, sizeof(where));          // ③ "어느 주소에 쓸지" (where)
-read(0, where, 8);                       // ④ where 주소에 8바이트 쓰기 ← 핵심
-puts(command);                           // ⑤ puts 호출
+int main(void) {
+  char command[0x40] = {0};
+  void *where = NULL;
+
+  setbuf(stdin, NULL);
+  setbuf(stdout, NULL);
+
+  printf("puts: %p\n", dlsym(RTLD_DEFAULT, "puts"));  // ① puts 실제 주소 출력 (leak)
+
+  printf("command: ");
+  read(0, command, sizeof(command) - 1);  // ② 명령 문자열 입력
+
+  printf("where: ");
+  read(0, &where, sizeof(where));          // ③ "어느 주소에 쓸지"
+
+  printf("value: ");
+  read(0, where, 8);                       // ④ where 주소에 8바이트 쓰기 ← 핵심
+
+  puts(command);                           // ⑤ puts 호출
+  return 0;
+}
 ```
 
 - **④ `read(0, where, 8)`** = **"원하는 주소에 원하는 8바이트"**를 그대로 써준다 → **임의 주소 쓰기(arbitrary write)**. 오버플로도 ROP도 필요 없다.
