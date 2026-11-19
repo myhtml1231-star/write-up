@@ -32,41 +32,7 @@ int main() {
 - `read(0, buf, 0x400)` — `buf`는 `0x40`인데 `0x400`을 받으므로 **반환 주소까지 덮을 수 있다.**
 - `write(1, buf, 0x40)` — 입력한 buf를 **화면에 그대로 출력**한다. `write`로 원하는 주소(함수 GOT)를 출력시키면 **libc 주소 leak**이 가능하다.
 
-### 3. offset = 0x48 — 왜 0x48인가
-
-`disassemble main`의 프롤로그를 명령어 순서대로 따라가면 buf부터 반환 주소까지 거리가 나온다. (각 명령이 스택을 어떻게 쌓는지는 아래 영상 참고)
-
-- `push %edi` 한 줄 때문에 buf와 SFP 사이에 **edi 4바이트**가 끼고, `lea -0x44(%ebp)`로 **buf는 `ebp-0x44`**에 잡힌다.
-
-<p align="center">
-  <img src="assets/basic_rop_x86/stackframe.svg" width="820" alt="buf 0x40 + edi 0x4 + SFP 0x4 = 0x48 스택 구조" />
-</p>
-
-```
-buf  (0x40)  +  edi (0x4)  +  SFP (0x4)  =  0x48
-ebp-0x44        ebp-0x04       ebp          → 그다음이 RET(ebp+4)
-```
-
-즉 **buf 시작 → 반환 주소 = 0x48**이라, `b"A" * 0x48`로 buf·edi·SFP를 덮고 지나가면 다음 4바이트가 RET이다.
-
-**프롤로그에 쓰인 레지스터 역할:**
-
-| 레지스터 | 역할 |
-|---|---|
-| `esp` | 스택 꼭대기 포인터. `push`/`sub`로 움직인다 (push = esp-4). |
-| `ebp` | 프레임 기준점. 고정해 두고 `ebp-0x44`처럼 변수를 참조한다. |
-| `edi` | `buf`를 0으로 초기화(`rep stos`)할 때 **쓰는 목적지**. 그래서 `push edi`로 백업됨 → 그 4바이트가 offset에 포함. |
-| `eax` | 초기화에 **쓸 값(0)**. |
-| `ecx` | 초기화 **반복 횟수(0x10)**. |
-| `edx` | `buf` 주소를 잠깐 담는 임시. 곧 `edi`로 옮김. |
-
-<p align="center">
-  <video src="assets/basic_rop_x86/stackframe.mov" controls width="640"></video>
-</p>
-
-> 영상이 안 보이면 <a href="assets/basic_rop_x86/stackframe.mov">여기서 재생</a> — `push ebp → push edi → sub 0x40` 순으로 스택이 쌓여 0x48이 되는 과정입니다.
-
-### 4. 페이로드 구성
+### 3. 페이로드 구성
 
 바이너리에 `system`이 없으므로 **2단계(ROP)**로 간다.
 
@@ -108,7 +74,7 @@ payload += p32(binsh)    # system의 인자: "/bin/sh"
 - **`binsh`** — libc 안의 `"/bin/sh"` 문자열. system의 인자(`[esp+4]`).
 - **`exit`** — system이 끝난 뒤 돌아갈 복귀주소(`[esp]`). 셸을 닫으면 **깔끔히 종료**(없으면 SegFault).
 
-### 5. 익스플로잇 코드
+### 4. 익스플로잇 코드
 
 ```python
 #!/usr/bin/env python3
@@ -164,6 +130,38 @@ p.interactive()
 </p>
 
 > `ELF("./basic_rop_x86")`, `ELF("./libc.so.6")`는 로컬 파일을 읽어 주소를 뽑으니 **두 파일이 실행 폴더에 있어야** 하고, `libc.so.6`은 **서버와 같은 버전**이어야 한다.
+
+### 5. offset = 0x48 — 왜 0x48인가
+
+위 코드의 `offset = 0x48`은 **buf 시작부터 반환 주소까지의 거리**다. `disassemble main`의 프롤로그를 명령어 순서대로 따라가면 그 거리가 나온다.
+
+- `push %edi` 한 줄 때문에 buf와 SFP 사이에 **edi 4바이트**가 끼고, `lea -0x44(%ebp)`로 **buf는 `ebp-0x44`**에 잡힌다.
+
+<p align="center">
+  <img src="assets/basic_rop_x86/stackframe.svg" width="820" alt="buf 0x40 + edi 0x4 + SFP 0x4 = 0x48 스택 구조" />
+</p>
+
+```
+buf  (0x40)  +  edi (0x4)  +  SFP (0x4)  =  0x48
+ebp-0x44        ebp-0x04       ebp          → 그다음이 RET(ebp+4)
+```
+
+즉 **buf 시작 → 반환 주소 = 0x48**이라, `b"A" * 0x48`로 buf·edi·SFP를 덮고 지나가면 다음 4바이트가 RET이다.
+
+**프롤로그에 쓰인 레지스터 역할:**
+
+| 레지스터 | 역할 |
+|---|---|
+| `esp` | 스택 꼭대기 포인터. `push`/`sub`로 움직인다 (push = esp-4). |
+| `ebp` | 프레임 기준점. 고정해 두고 `ebp-0x44`처럼 변수를 참조한다. |
+| `edi` | `buf`를 0으로 초기화(`rep stos`)할 때 **쓰는 목적지**. 그래서 `push edi`로 백업됨 → 그 4바이트가 offset에 포함. |
+| `eax` | 초기화에 **쓸 값(0)**. |
+| `ecx` | 초기화 **반복 횟수(0x10)**. |
+| `edx` | `buf` 주소를 잠깐 담는 임시. 곧 `edi`로 옮김. |
+
+`push ebp → push edi → sub 0x40` 순으로 스택이 쌓여 0x48이 되는 과정을 영상으로 보면:
+
+https://github.com/user-attachments/assets/5bcc9228-a3f1-4753-86e0-0754c4684a9e
 
 ### 6. 실행 결과
 
