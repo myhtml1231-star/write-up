@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 320" font-family="'DejaVu Sans Mono','Menlo',monospace">
+  <rect x="0" y="0" width="1040" height="320" rx="14" fill="#22223a"/>
+
+  <!-- low addr (left, buf) -> high addr (right, RET) -->
+  <!-- buf 0x40 -->
+  <rect x="60"  y="150" width="400" height="74" fill="#3a3a52" stroke="#55557a" stroke-width="2"/>
+  <text x="260" y="193" fill="#ffffff" font-size="24" text-anchor="middle">buf (0x40)</text>
+
+  <!-- edi 0x4 -->
+  <rect x="460" y="150" width="90" height="74" fill="#4a3f5c" stroke="#7a5f9a" stroke-width="2"/>
+  <text x="505" y="187" fill="#e4d6f5" font-size="16" text-anchor="middle">edi</text>
+  <text x="505" y="206" fill="#e4d6f5" font-size="16" text-anchor="middle">0x4</text>
+
+  <!-- SFP 0x4 (saved ebp) -->
+  <rect x="550" y="150" width="90" height="74" fill="#8f2a52" stroke="#ff6fa3" stroke-width="2"/>
+  <text x="595" y="187" fill="#ffffff" font-size="16" text-anchor="middle">SFP</text>
+  <text x="595" y="206" fill="#ffd0e2" font-size="15" text-anchor="middle">0x4</text>
+
+  <!-- RET -->
+  <rect x="640" y="150" width="160" height="74" fill="#3a3a52" stroke="#55557a" stroke-width="2"/>
+  <text x="720" y="193" fill="#ffffff" font-size="22" text-anchor="middle">RET</text>
+
+  <!-- brace 0x48 : buf start -> RET start -->
+  <path d="M60,140 C60,92 640,92 640,140" fill="none" stroke="#e23f7a" stroke-width="3"/>
+  <rect x="297" y="64" width="106" height="38" rx="10" fill="#e23f7a"/>
+  <text x="350" y="90" fill="#ffffff" font-size="22" text-anchor="middle">0x48</text>
+
+  <!-- equation -->
+  <text x="350" y="268" fill="#ffd0e2" font-size="16" text-anchor="middle">buf 0x40 + edi 0x4 + SFP 0x4 = 0x48  (= offset)</text>
+
+  <!-- address markers -->
+  <text x="60"  y="246" fill="#9aa0c4" font-size="13" text-anchor="middle">ebp-0x44</text>
+  <text x="505" y="246" fill="#9aa0c4" font-size="13" text-anchor="middle">ebp-0x04</text>
+  <text x="595" y="246" fill="#9aa0c4" font-size="13" text-anchor="middle">ebp</text>
+  <text x="720" y="246" fill="#9aa0c4" font-size="13" text-anchor="middle">ebp+4</text>
+
+  <text x="430" y="304" fill="#ffffff" font-size="18" font-weight="bold" text-anchor="middle">Stackframe (x86)</text>
+</svg>
