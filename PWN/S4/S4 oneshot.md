@@ -93,6 +93,10 @@ p.sendafter(b"MSG: ", payload)
 
 main이 `return`하면 덮인 리턴주소(one_gadget)로 점프해 `execve("/bin/sh")`가 실행된다.
 
+<p align="center">
+  <img src="assets/oneshot/exploit.webp" width="620" alt="stdout을 leak해 리턴주소를 one_gadget으로 부분 덮는 pwntools 코드" />
+</p>
+
 ```python
 #!/usr/bin/env python3
 from pwn import *
