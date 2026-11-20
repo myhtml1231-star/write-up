@@ -1,9 +1,9 @@
-# S4 · oneshot
+# S4 · hook
 
 ### 1. 문제 확인
 
 <p align="center">
-  <img src="assets/oneshot/challenge.png" width="420" alt="DreamHack oneshot 문제 페이지 제목" />
+  <img src="assets/hook/challenge.png" width="420" alt="DreamHack hook 문제 페이지 제목" />
 </p>
 
 ### 2. 코드
@@ -102,13 +102,13 @@ free(ptr)  →  __free_hook(ptr)  →  system(ptr)
 - **첫 `free(ptr)`** → `__free_hook` 있음 → `system(ptr)` → ptr 버퍼 앞부분(주소 바이트)을 명령어로 해석 → 쓰레기라 실패하지만 **그냥 리턴**
 - **둘째 `free(ptr)`** → 똑같이 `system(ptr)` → 리턴
 
-둘 다 **원래 해제 과정(2번)을 안 거쳤다.
+둘 다 **원래 해제 과정(2번)을 안 거쳤다.**
 그래서 두 free를 지나 코드 끝 **`system("/bin/sh")`에 도달 → 셸**이 열린다.
 
 ### 6. 익스플로잇 코드
 
 <p align="center">
-  <img src="assets/oneshot/exploit.webp" width="620" alt="stdout을 leak해 __free_hook을 system으로 덮는 pwntools 코드" />
+  <img src="assets/hook/exploit.webp" width="620" alt="stdout을 leak해 __free_hook을 system으로 덮는 pwntools 코드" />
 </p>
 
 ```python
@@ -139,7 +139,7 @@ p.interactive()
 stdout leak으로 libc base를 구하고(`0x7f65a6a2d000`), `__free_hook`을 system으로 덮은 뒤 두 free를 통과해 `system("/bin/sh")`로 셸을 열어 `cat flag`로 FLAG를 획득한다.
 
 <p align="center">
-  <img src="assets/oneshot/result.png" width="760" alt="원격 셸에서 cat flag로 FLAG를 확인한 화면" />
+  <img src="assets/hook/result.png" width="760" alt="원격 셸에서 cat flag로 FLAG를 확인한 화면" />
 </p>
 
 ```text
