@@ -102,11 +102,8 @@ free(ptr)  →  __free_hook(ptr)  →  system(ptr)
 - **첫 `free(ptr)`** → `__free_hook` 있음 → `system(ptr)` → ptr 버퍼 앞부분(주소 바이트)을 명령어로 해석 → 쓰레기라 실패하지만 **그냥 리턴**
 - **둘째 `free(ptr)`** → 똑같이 `system(ptr)` → 리턴
 
-둘 다 **원래 해제 과정(2번)을 안 거쳤다.** double free 검사가 거기 있는데 그 길을 아예 안 밟으니 abort가 안 난다. 실제로 해제한 적이 없으니 "두 번 해제했다"고 걸릴 것도 없다.
-
+둘 다 **원래 해제 과정(2번)을 안 거쳤다.
 그래서 두 free를 지나 코드 끝 **`system("/bin/sh")`에 도달 → 셸**이 열린다.
-
-> 문제 이름(oneshot)대로 원래 의도는 `__free_hook`에 one_gadget을 넣어 첫 free에서 바로 셸을 여는 것이다. 다만 one_gadget은 호출 시점 스택 조건(constraints)이 맞아야 하고, 이 문제의 free 호출 지점에선 세 후보 모두 조건이 안 맞아 execve가 실패했다. `__free_hook`에 system을 넣으면 조건이 없어 코드 끝 `system("/bin/sh")`로 흘러가 확실히 열린다.
 
 ### 6. 익스플로잇 코드
 
@@ -136,8 +133,6 @@ p.sendafter(b"Data: ", p64(free_hook) + p64(system))
 # free(ptr) → system(ptr) 두 번(쓰레기) 리턴 → system("/bin/sh") → 셸
 p.interactive()
 ```
-
-> `libc-2.23.so`는 실행 폴더에 있어야 하고 서버와 같은 버전(`2.23-0ubuntu11.3`)이어야 offset 계산이 맞는다.
 
 ### 7. 실행 결과
 
