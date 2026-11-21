@@ -43,33 +43,7 @@ int main(void) {
 - **① `dlsym`** 이 puts의 런타임 주소를 출력해 주니 **libc leak도 공짜**.
 - 이게 통하는 전제: 이 바이너리는 **No RELRO**라 GOT이 **쓰기 가능**하다. (Full RELRO였다면 GOT이 읽기전용이라 못 덮는다.)
 
-### 3. 왜 GOT에 system 주소를 덮는가
-
-`puts@plt`는 자기가 puts를 부르는지 **모른다.** 그냥 **`GOT[puts]`에 적힌 주소로 점프**할 뿐이다. 그래서 그 슬롯 값만 바꾸면 **기존 `puts(command)` 호출 자체가 다른 함수 호출로 변한다.**
-
-```
-변경 전:  puts(command) → puts@plt → GOT[puts] = libc의 puts   → puts(command)
-변경 후:  puts(command) → puts@plt → GOT[puts] = libc의 system → system(command)
-```
-
-**차이는 `GOT[puts]` 슬롯 값 하나(puts→system)뿐**이고, plt·호출문·인자는 전부 그대로다. 게다가 puts·system은 **둘 다 인자 1개(`char*`)를 rdi로 받는 형태가 같아서**, `puts(command)`가 그대로 `system(command)`이 된다.
-
-→ `command`에 `"/bin/sh"`를 넣어 두면 마지막 `puts(command)`가 **`system("/bin/sh")`**으로 바뀐다. `command`는 "넘길 인자", `where`/`value`는 "puts를 system으로 바꾸는 장치"이고, 둘은 `puts(command)` 한 줄에서 만난다.
-
-### 4. libc 베이스 구하기 — 심볼 offset으로 역산
-
-leak으로 얻은 건 **puts의 런타임 주소**지만, 정작 필요한 `system` 주소는 모른다. 대신 libc 파일 안에서 **puts·system의 상대 위치(offset)는 고정**이라, puts 주소에서 거꾸로 베이스를 구할 수 있다.
-
-```python
-libc.address = leaked_puts - libc.sym["puts"]   # base = 런타임주소 - 파일내 offset
-system = libc.sym["system"]                      # base + system offset (자동 반영)
-```
-
-- `libc.sym["puts"]` = libc 파일 내부의 puts **offset**
-- `leaked_puts - offset` = **이번 실행의 libc 베이스** (ASLR로 매번 바뀜)
-- 베이스를 `libc.address`에 넣으면, 그 뒤 `libc.sym["system"]`이 **실제 system 주소**로 계산된다.
-
-### 5. 익스플로잇 코드
+### 3. 익스플로잇 코드
 
 <p align="center">
   <img src="assets/got_overwrite/exploit.png" width="620" alt="libc를 leak해 system을 계산하고 puts@got을 덮는 pwntools 코드" />
@@ -99,6 +73,34 @@ p.interactive()
 ```
 
 > `libc.so.6`은 실행 폴더에 있어야 하고 **서버와 같은 버전**이어야 offset 계산이 맞는다.
+
+아래는 이 코드가 하는 일을 세 부분으로 나눠 본 것이다.
+
+### 4. 왜 GOT에 system 주소를 덮는가
+
+`puts@plt`는 자기가 puts를 부르는지 **모른다.** 그냥 **`GOT[puts]`에 적힌 주소로 점프**할 뿐이다. 그래서 그 슬롯 값만 바꾸면 **기존 `puts(command)` 호출 자체가 다른 함수 호출로 변한다.**
+
+```
+변경 전:  puts(command) → puts@plt → GOT[puts] = libc의 puts   → puts(command)
+변경 후:  puts(command) → puts@plt → GOT[puts] = libc의 system → system(command)
+```
+
+**차이는 `GOT[puts]` 슬롯 값 하나(puts→system)뿐**이고, plt·호출문·인자는 전부 그대로다. 게다가 puts·system은 **둘 다 인자 1개(`char*`)를 rdi로 받는 형태가 같아서**, `puts(command)`가 그대로 `system(command)`이 된다.
+
+→ `command`에 `"/bin/sh"`를 넣어 두면 마지막 `puts(command)`가 **`system("/bin/sh")`**으로 바뀐다. `command`는 "넘길 인자", `where`/`value`는 "puts를 system으로 바꾸는 장치"이고, 둘은 `puts(command)` 한 줄에서 만난다.
+
+### 5. libc 베이스 구하기 — 심볼 offset으로 역산
+
+leak으로 얻은 건 **puts의 런타임 주소**지만, 정작 필요한 `system` 주소는 모른다. 대신 libc 파일 안에서 **puts·system의 상대 위치(offset)는 고정**이라, puts 주소에서 거꾸로 베이스를 구할 수 있다.
+
+```python
+libc.address = leaked_puts - libc.sym["puts"]   # base = 런타임주소 - 파일내 offset
+system = libc.sym["system"]                      # base + system offset (자동 반영)
+```
+
+- `libc.sym["puts"]` = libc 파일 내부의 puts **offset**
+- `leaked_puts - offset` = **이번 실행의 libc 베이스** (ASLR로 매번 바뀜)
+- 베이스를 `libc.address`에 넣으면, 그 뒤 `libc.sym["system"]`이 **실제 system 주소**로 계산된다.
 
 ### 6. 실행 흐름 & 결과
 

@@ -24,43 +24,7 @@ int main(void) {
 
 x86 버전과 **소스는 사실상 동일**하다. `buf`는 `0x40`인데 `read`로 `0x400`을 받으므로 **반환 주소까지 덮을 수 있고**, 바로 뒤의 `write`가 **buf를 화면에 그대로 출력**해 준다. 바이너리에 `system`·`"/bin/sh"`가 없으니 **libc 주소를 leak해서** `system("/bin/sh")`을 호출하는 2단계 ROP로 간다.
 
-### 3. x86 → x64, 무엇이 달라지나
-
-핵심 차이는 **"인자를 어디로 넘기느냐"** 하나다.
-
-| 구분 | x86 (basic_rop_x86) | x64 (basic_rop_x64) |
-|---|---|---|
-| 주소 크기 | 4바이트 (`p32` / `u32`) | **8바이트** (`p64` / `u64`) |
-| 함수 인자 전달 | **스택**에 값을 쌓음 | **레지스터**(rdi, rsi, rdx …) |
-| 인자 세팅 방법 | 복귀주소 뒤에 값 나열 | **`pop` 가젯**으로 레지스터에 적재 |
-| leak 수신 크기 | `recvn(4)` | **`recvn(8)`** |
-| 스택 정렬 | 신경 안 씀 | movaps 16정렬 (필요 시 `ret` 1개) |
-
-x86은 `write_plt → 복귀주소 → 인자1 → 인자2 → 인자3` 식으로 **스택에 값을 쭉 늘어놓으면** 함수가 알아서 꺼내 썼다. x64는 그게 안 통한다. **인자가 레지스터로 들어가야** 하므로, 값을 레지스터에 **먼저 꽂아 두는 `pop` 가젯**이 필요하다.
-
-### 4. 레지스터로 인자 전달 — `pop` 가젯
-
-x64 함수 호출 규약(System V): 인자는 **rdi, rsi, rdx, rcx, r8, r9** 순으로 레지스터에 담는다. `write(fd, buf, len)`이면 `rdi=fd`, `rsi=buf`, `rdx=len`이다.
-
-```python
-pop_rdi     = rop.find_gadget(["pop rdi", "ret"]).address
-pop_rsi_r15 = rop.find_gadget(["pop rsi", "pop r15", "ret"]).address
-```
-
-- **`pop rdi ; ret`** — 스택 맨 위 값을 `rdi`로 꺼낸다. `rdi=1`(fd)을 세팅.
-- **`pop rsi ; pop r15 ; ret`** — `rsi`만 필요한데, 바이너리에 `pop rsi ; ret` 단독 가젯이 없어 보통 **`pop rsi ; pop r15`가 묶인 가젯**을 쓴다. `rsi`를 꺼낼 때 **r15도 어쩔 수 없이 하나 꺼내므로**, r15 자리에는 **버리는 값(0)**을 채운다.
-
-```python
-payload += p64(pop_rdi) + p64(1)                      # rdi = 1 (fd=stdout)
-payload += p64(pop_rsi_r15) + p64(read_got) + p64(0)  # rsi = read@got, r15 = 0 (더미)
-payload += p64(write_plt)                             # write(1, read@got, rdx)
-```
-
-그런데 **3번째 인자 `rdx`(길이)는 따로 세팅하지 않는다.** 바로 앞에서 프로그램 자신이 `write(1, buf, sizeof(buf))` = `write(1, buf, 0x40)`을 실행하면서 **`rdx`에 `0x40`을 이미 넣어 뒀기 때문**이다. 레지스터는 0으로 초기화되지 않고 **직전 값이 그대로 남으므로**, 그 `0x40`을 재활용한다. 그래서 `write(1, read@got, 0x40)`이 완성되어 read의 libc 주소가 출력된다.
-
-> 정리하면 x64 leak 가젯은 **"rdi 세팅 → rsi 세팅(+더미 r15) → write 호출"** 3단이고, rdx는 **프로그램이 남겨 준 값을 빌려 쓴다.**
-
-### 5. 익스플로잇 코드
+### 3. 익스플로잇 코드
 
 <p align="center">
   <img src="assets/basic_rop_x64/exploit.png" width="520" alt="pop 가젯으로 레지스터 인자를 세팅해 libc를 leak하고 system을 호출하는 pwntools 코드" />
@@ -121,6 +85,44 @@ p.interactive()
 > `offset = 0x48`은 x86과 동일하게 **buf(0x40) + SFP(0x8)** = 반환 주소까지의 거리다. (유도 과정은 [basic_rop_x86](./B2%20basic_rop_x86.md) 참고.)
 >
 > **정렬**: x86과 달리 x64는 `system` 진입 시 rsp가 16정렬이어야 하고, 어긋나면 `movaps`에서 죽는다. 보통 `ret` 가젯 하나로 보정하는데, **이 바이너리는 진입 시점이 이미 16정렬이라 `ret` 없이** 바로 `system`을 넣어야 셸이 열린다. (movaps에서 죽으면 넣고, 멀쩡히 열리면 빼는 식으로 맞춘다.)
+
+아래는 이 코드가 x86과 달라지는 부분(레지스터 전달)과 leak을 받는 구조를 본 것이다.
+
+### 4. x86 → x64, 무엇이 달라지나
+
+핵심 차이는 **"인자를 어디로 넘기느냐"** 하나다.
+
+| 구분 | x86 (basic_rop_x86) | x64 (basic_rop_x64) |
+|---|---|---|
+| 주소 크기 | 4바이트 (`p32` / `u32`) | **8바이트** (`p64` / `u64`) |
+| 함수 인자 전달 | **스택**에 값을 쌓음 | **레지스터**(rdi, rsi, rdx …) |
+| 인자 세팅 방법 | 복귀주소 뒤에 값 나열 | **`pop` 가젯**으로 레지스터에 적재 |
+| leak 수신 크기 | `recvn(4)` | **`recvn(8)`** |
+| 스택 정렬 | 신경 안 씀 | movaps 16정렬 (필요 시 `ret` 1개) |
+
+x86은 `write_plt → 복귀주소 → 인자1 → 인자2 → 인자3` 식으로 **스택에 값을 쭉 늘어놓으면** 함수가 알아서 꺼내 썼다. x64는 그게 안 통한다. **인자가 레지스터로 들어가야** 하므로, 값을 레지스터에 **먼저 꽂아 두는 `pop` 가젯**이 필요하다.
+
+### 5. 레지스터로 인자 전달 — `pop` 가젯
+
+x64 함수 호출 규약(System V): 인자는 **rdi, rsi, rdx, rcx, r8, r9** 순으로 레지스터에 담는다. `write(fd, buf, len)`이면 `rdi=fd`, `rsi=buf`, `rdx=len`이다.
+
+```python
+pop_rdi     = rop.find_gadget(["pop rdi", "ret"]).address
+pop_rsi_r15 = rop.find_gadget(["pop rsi", "pop r15", "ret"]).address
+```
+
+- **`pop rdi ; ret`** — 스택 맨 위 값을 `rdi`로 꺼낸다. `rdi=1`(fd)을 세팅.
+- **`pop rsi ; pop r15 ; ret`** — `rsi`만 필요한데, 바이너리에 `pop rsi ; ret` 단독 가젯이 없어 보통 **`pop rsi ; pop r15`가 묶인 가젯**을 쓴다. `rsi`를 꺼낼 때 **r15도 어쩔 수 없이 하나 꺼내므로**, r15 자리에는 **버리는 값(0)**을 채운다.
+
+```python
+payload += p64(pop_rdi) + p64(1)                      # rdi = 1 (fd=stdout)
+payload += p64(pop_rsi_r15) + p64(read_got) + p64(0)  # rsi = read@got, r15 = 0 (더미)
+payload += p64(write_plt)                             # write(1, read@got, rdx)
+```
+
+그런데 **3번째 인자 `rdx`(길이)는 따로 세팅하지 않는다.** 바로 앞에서 프로그램 자신이 `write(1, buf, sizeof(buf))` = `write(1, buf, 0x40)`을 실행하면서 **`rdx`에 `0x40`을 이미 넣어 뒀기 때문**이다. 레지스터는 0으로 초기화되지 않고 **직전 값이 그대로 남으므로**, 그 `0x40`을 재활용한다. 그래서 `write(1, read@got, 0x40)`이 완성되어 read의 libc 주소가 출력된다.
+
+> 정리하면 x64 leak 가젯은 **"rdi 세팅 → rsi 세팅(+더미 r15) → write 호출"** 3단이고, rdx는 **프로그램이 남겨 준 값을 빌려 쓴다.**
 
 ### 6. leak 받는 구조 — write가 두 번, 8바이트를 받는 이유
 
