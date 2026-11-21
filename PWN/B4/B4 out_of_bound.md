@@ -132,7 +132,7 @@ name + 8  ~ name + 11  : p32(0x804a0ac)
 `p.interactive()`는 연결된 프로그램과 현재 터미널 사이에서 입력과 출력을 이어 줍니다. 셸이 열리면 `ls`로 파일을 확인하고 `cat flag`로 FLAG 파일 내용을 출력할 수 있습니다.
 
 ```text
-DH{2524e20ddeee45f11c8eb9180d572963}
+DH{2524e20ddeee45f11c8eb91804d57296}
 ```
 
 위 값을 DreamHack 문제 페이지의 FLAG 입력란에 붙여 넣어 제출합니다.
