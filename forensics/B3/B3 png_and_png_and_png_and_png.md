@@ -72,4 +72,8 @@ PNG의 시작과 끝을 구분하는 바이트는 다음과 같다.
   <img src="assets/png_and_png_and_png_and_png/flag.png" width="800" alt="분리된 이미지에서 FLAG 확인" />
 </p>
 
+```text
+DH{Dreamhack&CSDF}
+```
+
 **풀이 핵심:** PNG 끝 표시의 검색 위치에서 끝 바이트와 다음 시작 위치를 계산하고, HxD에서 해당 바이트 범위를 새 PNG로 저장한다.
