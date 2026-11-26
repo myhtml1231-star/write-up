@@ -19,10 +19,6 @@ PNG의 시작과 끝을 구분하는 바이트는 다음과 같다.
 
 끝 표시의 `49 45 4E 44`는 `IEND`이고, 뒤의 `AE 42 60 82`는 해당 청크의 CRC다. HxD에서 `Ctrl + F`를 누르고 **16진수 값**에 끝 표시를 입력한 뒤 **모두 찾기**를 선택한다.
 
-<p align="center">
-  <img src="assets/png_and_png_and_png_and_png/iend-search.png" width="800" alt="PNG 끝 표시를 검색한 결과 8개" />
-</p>
-
 검색 결과가 8개이며, 이 파일에서는 각 끝 표시 다음에 새로운 PNG 시작 표시가 이어진다. 첫 번째 PNG와 추가된 7개를 합쳐 총 8개의 이미지를 분리할 수 있다.
 
 ### 3. 시작과 끝 오프셋 계산
@@ -38,15 +34,7 @@ PNG의 시작과 끝을 구분하는 바이트는 다음과 같다.
 두 번째 PNG 마지막:   0xF913 + 0x7 = 0xF91A
 ```
 
-<p align="center">
-  <img src="assets/png_and_png_and_png_and_png/offset-guide.png" width="800" alt="검색 결과와 블록 선택 오프셋" />
-</p>
-
-따라서 두 번째 PNG의 선택 범위는 **`62F5`부터 `F91A`까지**다. 검색된 `62ED`는 이전 PNG의 끝 표시이고 `62F5`는 그 다음 PNG의 시작이므로 값이 다르다. 아래 화면에서도 `IEND` 뒤에 `89 50 4E 47`이 바로 이어진다.
-
-<p align="center">
-  <img src="assets/png_and_png_and_png_and_png/boundary.png" width="800" alt="IEND 뒤에 다음 PNG 시작 표시가 이어지는 HxD 화면" />
-</p>
+따라서 두 번째 PNG의 선택 범위는 **`62F5`부터 `F91A`까지**다. 검색된 `62ED`는 이전 PNG의 끝 표시이고 `62F5`는 그 다음 PNG의 시작이므로 값이 다르다. 실제 바이트에서도 `IEND` 뒤에 `89 50 4E 47`이 바로 이어진다.
 
 같은 방법을 반복하면 FLAG가 있는 네 번째 PNG의 범위도 구할 수 있다. `1EB74`에서 시작하는 세 번째 끝 표시 바로 다음인 `1EB7C`가 네 번째 PNG의 시작이고, 네 번째 끝 표시 `2A975`의 마지막 바이트는 `2A97C`다.
 
@@ -64,35 +52,13 @@ PNG의 시작과 끝을 구분하는 바이트는 다음과 같다.
 4. **HxD에서** `Ctrl + N`으로 새 파일을 열고 `Ctrl + V`로 붙여넣는다.
 5. 새 파일의 처음이 PNG 시작 표시 `89 50 4E 47 0D 0A 1A 0A`인지 확인하고 `Ctrl + S`로 `.png` 확장자를 붙여 저장한다.
 
-<p align="center">
-  <img src="assets/png_and_png_and_png_and_png/selected-range.png" width="800" alt="PNG 끝까지 선택한 HxD 화면" />
-</p>
-
-<p align="center">
-  <img src="assets/png_and_png_and_png_and_png/save-guide.png" width="800" alt="선택한 데이터를 복사해 새 파일에 저장하는 안내" />
-</p>
-
 두 번째 이미지는 `0xF91A - 0x62F5 + 1 = 0x9626`, 즉 **38,438바이트**다. 네 번째 이미지는 `1EB7C–2A97C`를 같은 방식으로 분리한다. 아래는 분리된 PNG의 끝에 `IEND`와 마지막 CRC 바이트 `82`가 있는 모습이다.
 
 <p align="center">
   <img src="assets/png_and_png_and_png_and_png/extracted-end.png" width="700" alt="분리된 PNG의 마지막 IEND 바이트" />
 </p>
 
-### 5. 파일이 열리지 않는 경우
-
-HxD에서 범위를 올바르게 복사했더라도 메모장에 붙여넣으면 실제 바이트가 아니라 `89 50 4E ...`와 같은 **텍스트**가 저장된다. 파일 이름을 `.png`로 바꾸더라도 내용이 PNG 바이너리로 변환되는 것은 아니므로 사진 앱에서 열리지 않는다.
-
-| 메모장에 붙여넣은 내용 | 저장된 파일의 속성 |
-| :---: | :---: |
-| <img src="assets/png_and_png_and_png_and_png/hex-text.png" width="420" alt="메모장에 표시된 16진수 글자"> | <img src="assets/png_and_png_and_png_and_png/file-properties.png" width="420" alt="PNG 확장자로 저장된 텍스트 파일의 속성"> |
-
-<p align="center">
-  <img src="assets/png_and_png_and_png_and_png/open-error.png" width="500" alt="사진 앱에서 파일 형식을 열 수 없다는 오류" />
-</p>
-
-실습에서 이 파일은 확장자가 `.png`였지만 첫 바이트가 `38 39 20 35 30 ...`이었다. 이는 `89 50 ...`이라는 글자의 바이트 값이다. **HxD에서 새 파일을 열어 붙여넣고 저장**하면 원래 이미지 바이트가 유지된다.
-
-### 6. FLAG 확인
+### 5. FLAG 확인
 
 네 번째 PNG를 분리해 열면 이미지에서 FLAG를 확인할 수 있다.
 
