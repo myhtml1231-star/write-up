@@ -52,7 +52,13 @@ PNG의 시작과 끝을 구분하는 바이트는 다음과 같다.
 4. **HxD에서** `Ctrl + N`으로 새 파일을 열고 `Ctrl + V`로 붙여넣는다.
 5. 새 파일의 처음이 PNG 시작 표시 `89 50 4E 47 0D 0A 1A 0A`인지 확인하고 `Ctrl + S`로 `.png` 확장자를 붙여 저장한다.
 
-두 번째 이미지는 `0xF91A - 0x62F5 + 1 = 0x9626`, 즉 **38,438바이트**다. 네 번째 이미지는 `1EB7C–2A97C`를 같은 방식으로 분리한다. 아래는 분리된 PNG의 끝에 `IEND`와 마지막 CRC 바이트 `82`가 있는 모습이다.
+두 번째 이미지는 `0xF91A - 0x62F5 + 1 = 0x9626`, 즉 **38,438바이트**다. FLAG가 있는 네 번째 이미지는 아래와 같이 시작 `1EB7C`, 끝 `2A97C`를 입력해 선택한다. 길이는 `0x2A97C - 0x1EB7C + 1 = 0xBE01`바이트다.
+
+<p align="center">
+  <img src="assets/png_and_png_and_png_and_png/flag-selection.png" width="300" alt="FLAG가 있는 네 번째 PNG의 시작과 끝 오프셋 선택" />
+</p>
+
+선택한 범위를 같은 방법으로 복사해 새 파일에 저장한다. 아래는 분리된 PNG의 끝에 `IEND`와 마지막 CRC 바이트 `82`가 있는 모습이다.
 
 <p align="center">
   <img src="assets/png_and_png_and_png_and_png/extracted-end.png" width="700" alt="분리된 PNG의 마지막 IEND 바이트" />
